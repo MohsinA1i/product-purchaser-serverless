@@ -1,0 +1,1 @@
+A serverless API for Amazon Web Services that purchases products on select sites.

@@ -1,0 +1,15 @@
+{
+    "version": "1.0.0",
+    "name": "product-purchaser-store",
+    "main": "store.js",
+    "dependencies": {
+        "chrome-aws-lambda": "^3.1.1",
+        "puppeteer-core": "^3.1.1",
+        "puppeteer-extra": "^3.1.13",
+        "puppeteer-extra-plugin-recaptcha": "^3.1.14",
+        "puppeteer-extra-plugin-stealth": "^2.4.14",
+        "urlencode": "^1.1.0",
+        "user-agents": "^1.0.559",
+        "uuid": "^8.3.0"
+      }
+}
