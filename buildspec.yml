@@ -2,12 +2,11 @@ version: 0.2
 phases:
   install:
     commands:
-      # Install all dependencies (including dependencies for running tests)
-      - npm install
-  pre_build:
-    commands:
-      # Remove all dependencies not needed for the Lambda deployment package (the packages from devDependencies in package.json)
-      - npm prune --production
+      # Install all dependencies
+      - cd lambdas/add && npm install --production
+      - cd lambdas/edit && npm install --production
+      - cd lambdas/get && npm install --production
+      - cd lambdas/task && npm install --production
   build:
     commands:
       # Use AWS SAM to package the application by using AWS CloudFormation
