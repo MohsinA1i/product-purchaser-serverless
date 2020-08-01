@@ -52,7 +52,7 @@ Resources:
       Description: Gets user information.
       Policies:
         - AWSLambdaBasicExecutionRole
-        - DynamoDBWritePolicy:
+        - DynamoDBReadPolicy:
              TableName: 
                Ref: users
       Layers:
@@ -130,7 +130,7 @@ Resources:
       Description: Performs actions on stores.
       Policies:
         - AWSLambdaBasicExecutionRole
-        - DynamoDBWritePolicy:
+        - DynamoDBCrudPolicy:
              TableName: 
                Ref: users
       Layers:
