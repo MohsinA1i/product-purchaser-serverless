@@ -48,7 +48,7 @@ Resources:
       CodeUri: lambdas/get/
       Handler: get.handler
       MemorySize: 128
-      Timeout: 30
+      Timeout: 1
       Description: Gets user information.
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -74,7 +74,7 @@ Resources:
       CodeUri: lambdas/add/
       Handler: add.handler
       MemorySize: 128
-      Timeout: 30
+      Timeout: 1
       Description: Adds new user.
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -100,7 +100,7 @@ Resources:
       CodeUri: lambdas/edit/
       Handler: edit.handler
       MemorySize: 128
-      Timeout: 30
+      Timeout: 1
       Description: Edits user information.
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -125,8 +125,8 @@ Resources:
     Properties:
       CodeUri: lambdas/task/
       Handler: task.handler
-      MemorySize: 1024
-      Timeout: 120
+      MemorySize: 256
+      Timeout: 180
       Description: Performs actions on stores.
       Policies:
         - AWSLambdaBasicExecutionRole
