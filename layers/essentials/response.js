@@ -30,6 +30,7 @@ class Response {
     }
 
     get value() {
+        this.response.body = JSON.stringify(this.response.body);
         return this.response;
     }
 }

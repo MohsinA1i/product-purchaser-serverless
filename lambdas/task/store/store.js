@@ -399,12 +399,12 @@ class Store extends Site {
         } else if (to === 'account') {
             await super.goto(`/account`);
         } else if (to === 'contact_information') {
-            await super.goto(`/checkout?step=contact_information}`);
+            await super.goto(`/checkout?step=contact_information`);
         } else if (to === 'shipping') {
-            await super.goto(`/checkout?step=shipping_method}`);
+            await super.goto(`/checkout?step=shipping_method`);
         } else if (to === 'payment') {
             await Promise.all([
-                super.goto(`/checkout?step=payment_method}`),
+                super.goto(`/checkout?step=payment_method`),
                 this._waitForPayment()
             ]);
         }

@@ -45,7 +45,7 @@ class Site {
         
         this.page = await this.browser.newPage();
 
-        if (this.state.proxy) 
+        if (this.state.proxy.username) 
             await this.page.authenticate({ username: this.state.proxy.username, password: this.state.proxy.password });
         
         await this.page.setUserAgent(this.state.fingerprint.useragent);
@@ -64,7 +64,9 @@ class Site {
             const type = req.resourceType();
             const method = req.method();
 
-            if (url.startsWith(`https://${this.hostname}`) && req.isNavigationRequest()) { console.log(req.url()); }
+            if (url.startsWith(`https://${this.hostname}`) && req.isNavigationRequest()) { 
+                console.log(req.url());
+            }
 
             if (method === 'POST' && type === 'document' && url.startsWith(`https://${this.hostname}`)) {
                 const path = url.match(/(?:https?:\/\/)?(?:[^\/]+)([^?]+)/)[1];
