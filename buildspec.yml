@@ -3,9 +3,7 @@ phases:
   install:
     commands:
       # Install all dependencies
-      - cd lambdas/add && npm install --production; cd ../..
-      - cd lambdas/edit && npm install --production; cd ../..
-      - cd lambdas/get && npm install --production; cd ../..
+      - cd lambdas/register && npm install --production; cd ../..
       - cd lambdas/task && npm install --production; cd ../..
   build:
     commands:
