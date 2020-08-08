@@ -17,15 +17,13 @@ class Site {
 
     async open() {
         this.state = new StateManager(this.options.userId);
-        if (this.options.session) {
+        if (this.options.session) 
             await this.state.load(this.options.session);
-        } else {
+        else
             await this.state.create(this.hostname, this.options.proxy);
-        }
 
-        if (this.options.captcha) {
+        if (this.options.captcha)
             Puppeteer.use(RecaptchaPlugin({ provider: { id: '2captcha', token: this.options.captcha } }));
-        }
 
         const args = [
             ...Chromium.args,
@@ -34,18 +32,20 @@ class Site {
         ];
         if (this.state.proxy) 
             args.push(`--proxy-server=http://${this.state.proxy.address}:${this.state.proxy.port}`);
+
         if (this.options.headless && this.options.captcha === undefined) this.options.headless = false;
+        
         this.browser = await Puppeteer.launch({
+            executablePath: await Chromium.executablePath,
             headless: this.options.headless, 
             slowMo: 10, 
             args: args,
-            defaultViewport: this.state.fingerprint.viewport,
-            executablePath: await Chromium.executablePath,
+            defaultViewport: this.state.fingerprint.viewport
         });
         
         this.page = await this.browser.newPage();
 
-        if (this.state.proxy.username) 
+        if (this.state.proxy && this.state.proxy.username) 
             await this.page.authenticate({ username: this.state.proxy.username, password: this.state.proxy.password });
         
         await this.page.setUserAgent(this.state.fingerprint.useragent);
@@ -91,7 +91,7 @@ class Site {
                 }
             }
 
-            if (type === 'document' || type === 'script' || type === 'xhr' || type === 'fetch' || type === 'stylesheet' && !this.headless) {
+            if (type === 'document' || type === 'script' || type === 'xhr' || type === 'fetch' || type === 'stylesheet' && !this.options.headless) {
                 req.continue();
                 return;
             }

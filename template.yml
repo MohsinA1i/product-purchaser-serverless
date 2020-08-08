@@ -42,40 +42,14 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-  GetFunction:
+  RegisterFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambdas/get/
-      Handler: get.handler
+      CodeUri: lambdas/register/
+      Handler: register.handler
       MemorySize: 128
       Timeout: 1
-      Description: Gets user information.
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - DynamoDBReadPolicy:
-             TableName: 
-               Ref: users
-      Layers:
-        - !Ref EssentialsLayer
-      Environment: 
-        Variables: 
-          TABLE_NAME: 
-            Ref: users
-      Events:
-        GetEvent:
-          Type: Api 
-          Properties:
-            Path: /get
-            Method: post
-
-  AddFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/add/
-      Handler: add.handler
-      MemorySize: 128
-      Timeout: 1
-      Description: Adds new user.
+      Description: Adds new users to database.
       Policies:
         - AWSLambdaBasicExecutionRole
         - DynamoDBWritePolicy:
@@ -87,38 +61,6 @@ Resources:
         Variables: 
           TABLE_NAME: 
             Ref: users
-      Events:
-        AddEvent:
-          Type: Api 
-          Properties:
-            Path: /add
-            Method: post
-
-  EditFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/edit/
-      Handler: edit.handler
-      MemorySize: 128
-      Timeout: 1
-      Description: Edits user information.
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - DynamoDBWritePolicy:
-             TableName: 
-               Ref: users
-      Layers:
-        - !Ref EssentialsLayer
-      Environment: 
-        Variables: 
-          TABLE_NAME: 
-            Ref: users
-      Events:
-        EditEvent:
-          Type: Api 
-          Properties:
-            Path: /edit
-            Method: post
 
   TaskFunction:
     Type: AWS::Serverless::Function
@@ -139,12 +81,6 @@ Resources:
         Variables: 
           TABLE_NAME: 
             Ref: users
-      Events:
-        TaskEvent:
-          Type: Api 
-          Properties:
-            Path: /task
-            Method: post
 
   EssentialsLayer:
       Type: AWS::Serverless::LayerVersion

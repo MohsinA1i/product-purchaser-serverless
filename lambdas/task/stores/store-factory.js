@@ -5,16 +5,26 @@ class StoreFactory {
         BOTH: 2
     }
 
+    static environment = {
+        LOCAL: 0,
+        AWS: 1
+    }
+
     getStore(url, options) {
         const hostname = url.match(/(?:https?:\/\/)?([^\/]+)/)[1];
-        const domain = hostname.match(/(?:www\.)?([^\/.]+)/)[1];
-        const supported = this.supportedStore(domain);
-        if (supported) {
-            const Store = require(`./store/profiles/${domain}.js`);
-            return new Store(options);
-        } else {
-            const Store = require(`./store/profiles/generic.js`);
+        if (options.store === StoreFactory.environment.AWS) {
+            const Store = require('./aws/aws-store.js');
             return new Store(hostname, options);
+        } else {
+            const domain = hostname.match(/(?:www\.)?([^\/.]+)/)[1];
+            const supported = this.supportedStore(domain);
+            if (supported) {
+                const Store = require(`./local/profiles/${domain}.js`);
+                return new Store(options);
+            } else {
+                const Store = require(`./local/profiles/generic.js`);
+                return new Store(hostname, options);
+            }
         }
     }
 

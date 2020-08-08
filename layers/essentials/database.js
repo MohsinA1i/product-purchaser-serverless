@@ -8,11 +8,19 @@ class Database {
     }
 
     async getEntry() {
-        return (await DynamoDB.get({ TableName: Table, Key: { id: this.userId } }).promise()).Item;
+        const params = { 
+            TableName: Table, 
+            Key: { id: this.userId }
+        }
+        return (await DynamoDB.get(params).promise()).Item;
     }
 
     async createEntry(document) {
-        return await DynamoDB.put({ TableName: Table, Item: {id: this.userId, ...document} }).promise();
+        const params = {
+            TableName: Table,
+            Item: {id: this.userId, ...document}
+        }
+        return await DynamoDB.put(params).promise();
     }
 
     createQuery() {
@@ -60,7 +68,6 @@ class Database {
             ...this._buildParams()
         };
 
-        console.log(params);
         return await DynamoDB.update(params).promise();
     }
 
@@ -94,8 +101,12 @@ class Database {
                 const _id = this._setName(names, id);
                 for (const attribute in document) {
                     const _attribute = this._setName(names, attribute);
-                    const _value = this._setValue(values, document[attribute]);
-                    setExpression += `${_type}.${_id}.${_attribute} = ${_value}, `;
+                    const value = document[attribute]
+                    if (value) {
+                        const _value = this._setValue(values, value);
+                        setExpression += `${_type}.${_id}.${_attribute} = ${_value}, `;
+                    } else 
+                        removeExpression += `${_type}.${_id}.${_attribute}, `
                 }
             }
         }

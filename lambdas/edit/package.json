@@ -1,8 +1,0 @@
-{
-    "version": "1.0.0",
-    "name": "product-purchaser-edit",
-    "main": "edit.js",
-    "dependencies": {
-        "uuid": "^8.1.0"
-    }
-}

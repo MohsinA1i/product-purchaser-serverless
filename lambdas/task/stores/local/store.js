@@ -122,6 +122,13 @@ class Store extends Site {
         return this.errors;
     }
 
+    async setCoupon(coupon) {
+        const here = await this.where();
+        if (here !== 'contact_information' && here !== 'shipping' && here !== 'payment')
+            await this.goto('contact_information');
+        return await this._handleCoupon(coupon);
+    }
+
     async setShipping() {
         await this.goto('shipping');
         await this._checkContact();
@@ -129,13 +136,6 @@ class Store extends Site {
         this.state.session.details.shipping = 0;
 
         return this.errors;
-    }
-
-    async setCoupon(coupon) {
-        const here = await this.where();
-        if (here !== 'contact_information' && here !== 'shipping' && here !== 'payment')
-            await this.goto('contact_information');
-        return await this._handleCoupon(coupon);
     }
 
     async submitPayment(card, contact) {
@@ -183,30 +183,6 @@ class Store extends Site {
         if (elements.length == 0) throw error;
     }
 
-    async _waitForPayment() {
-        const fields = {
-            'number':  false,
-            'name': false,
-            'expiry': false,
-            'verification_value': false
-        };
-
-        await new Promise(resolve => {
-            const page = this.page;
-            async function wait(frame) {
-                try { await frame.waitForNavigation({ timeout: this.timeout, waitUntil: "load" }); }
-                catch (error) { }
-                const endpoint = frame.url().match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
-                if (fields.hasOwnProperty(endpoint)) fields[endpoint] = true;
-                if (!Object.values(fields).includes(false)) {
-                    page.removeListener('frameattached', wait);
-                    resolve();
-                }
-            }
-            page.on('frameattached', wait);
-        });
-    }
-
     async _handleContact(contact) {
         const fields = {
             'checkout_shipping_address_first_name': contact.firstName,
@@ -252,9 +228,7 @@ class Store extends Site {
 
         for (const field in fields) {
             const value = fields[field];
-            await this.page.$eval(`#${field}`, (element, value) => {
-                element.value = value;
-            }, value);
+            await this.page.$eval(`#${field}`, (element, value) => element.value = value, value);
         }
 
         await this.waitForReCaptcha();
@@ -272,8 +246,7 @@ class Store extends Site {
         await new Promise(resolve => setTimeout(resolve, 200));
         await Promise.all([
             this.click('#continue_button'),
-            this.page.waitForNavigation({ timeout: this.timeout, waitUntil: "domcontentloaded" }),
-            this._waitForPayment(),
+            this.page.waitForNavigation({ timeout: this.timeout, waitUntil: "domcontentloaded" })
         ]);
     }
 
@@ -310,12 +283,22 @@ class Store extends Site {
         const fields = {
             'checkout_billing_address_first_name': contact.firstName,
             'checkout_billing_address_last_name': contact.lastName,
-            'checkout_billing_address_address1': contact.address,
-            'checkout_billing_address_address2': contact.addressOptional,
             'checkout_billing_address_city': contact.city,
-            'checkout_billing_address_zip': contact.postalCode,
-            'checkout_billing_address_phone': contact.phone
+            'checkout_billing_address_zip': contact.postalCode
         }
+
+        await this.page.evaluate((address, address2) => {
+            let element = document.querySelector('#checkout_billing_address_address2');
+            if (element === null) address = `${address} ${address2}`;
+            else element.value = address2;
+            element = document.querySelector('#checkout_billing_address_address1');
+            element.value = address;
+        }, contact.address, contact.address2);
+
+        await this.page.evaluate((company) => {
+            let element = document.querySelector('#checkout_billing_address_company');
+            if (element) element.value = company;
+        }, contact.company);
 
         try {
             await this.page.select('#checkout_billing_address_country', contact.country);
@@ -327,14 +310,15 @@ class Store extends Site {
                 element.value = element.querySelector(`[data-alternate-values*="${state}"]`).value;
             }, contact.state);
         } catch (error) { throw new Error('Unexpected value for state'); }
+
+        await this.page.evaluate((phone) => {
+            let element = document.querySelector('#checkout_billing_address_phone');
+            if (element) element.value = phone;
+        }, contact.phone);
         
         for (const field in fields) {
-            const value = fields[field]
-            if (value !== undefined) {
-                await this.page.$eval(`#${field}`, (element, value) => {
-                    element.value = value;
-                }, value);
-            }
+            const value = fields[field];
+            await this.page.$eval(`#${field}`, (element, value) => element.value = value, value);
         }
     }
 
@@ -349,8 +333,9 @@ class Store extends Site {
         for (const field in fields) {
             const frameElement = await this.page.$(`iframe[id^="card-fields-${field}"]`);
             const frame = await frameElement.contentFrame();
+            await frame.waitForFunction(() => document.readyState === 'complete', { timeout: this.timeout, polling: 'mutation' });
             await frame.waitForFunction((field) => document.querySelector(`#${field}`).hasAttribute('style'),
-                { timeout: this.timeout, polling: 'mutation' }, field);
+            { timeout: this.timeout, polling: 'mutation' }, field);
             await frame.$eval(`#${field}`, (element, value) => element.value = value, fields[field]);
         }
 
@@ -403,10 +388,7 @@ class Store extends Site {
         } else if (to === 'shipping') {
             await super.goto(`/checkout?step=shipping_method`);
         } else if (to === 'payment') {
-            await Promise.all([
-                super.goto(`/checkout?step=payment_method`),
-                this._waitForPayment()
-            ]);
+            await super.goto(`/checkout?step=payment_method`);
         }
     }
 

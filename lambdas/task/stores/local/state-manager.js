@@ -117,7 +117,7 @@ class StateManager {
             }
             this.database.buildQuery('update', 'session', this.sessionId, sessionUpdate);
         } else {
-            const fingerprintUpdate = { cookies: this.fingerprint.cookies, session: null };
+            const fingerprintUpdate = { cookies: this.fingerprint.cookies, session: undefined };
             this.database.buildQuery('remove', 'session', this.sessionId);
             this.database.buildQuery('update', 'fingerprint', this.fingerprintId, fingerprintUpdate);
         }
