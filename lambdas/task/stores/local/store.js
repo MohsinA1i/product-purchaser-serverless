@@ -119,7 +119,7 @@ class Store extends Site {
         await this._handleContact(contact);
         this.state.session.details.contact = contact;
 
-        return this.errors;
+        return this.warnings;
     }
 
     async setCoupon(coupon) {
@@ -135,7 +135,7 @@ class Store extends Site {
         await this._handleShipping();
         this.state.session.details.shipping = 0;
 
-        return this.errors;
+        return this.warnings;
     }
 
     async submitPayment(card, contact) {
@@ -158,7 +158,7 @@ class Store extends Site {
             this.state.session.details.payment = 0;
         }
 
-        return this.errors;
+        return this.warnings;
     }
 
     async dispose() {
@@ -428,9 +428,9 @@ class Store extends Site {
             }
         }));
 
-        if (this.errors === undefined) this.errors = [];
-        this.errors.push({
-            message: "Some products went out of stock",
+        if (this.warnings === undefined) this.warnings = [];
+        this.warnings.push({
+            detail: "Some products went out of stock",
             products: items
         });
 

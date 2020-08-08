@@ -9,16 +9,16 @@ exports.handler = async (event) => {
     const userId = Uuid.v4();
     const database = new Database(userId);
     const user = createUser();
-    response.message = { detail: "Registered user", id: userId };
     try {
         await database.createEntry(user);
+        response.status = 201;
+        response.body.detail = 'Registered user';
+        response.body.id = userId;
     } catch (error) {
-        response.status(500);
-        response.error(error.message);
-        return response.value;
+        response.status = 500;
+        response.body.error = error.message;
     }
     
-    response.status(201);
     return response.value;
 };
 

@@ -27,67 +27,59 @@ class TaskManager {
     }
 
     async execute() {
-        const response = { tasks: [] };
+        let error, warnings = [];
+
         for (const task of this.tasks) {
-            const result = await this._execute(task);
-            if (Array.isArray(result)) {
-                response = [...response, ...result];
-            } else {
-                response.push(result);
-                if (this._blockingTask(task) && result.error) {
-                    response.error = result.error;
-                    break;
-                }
+            try {
+                const _warnings = await this._execute(task);
+                warnings = [...warnings, ..._warnings];
+            } catch (_error) {
+                error = _error.message;
+                break;
             }
+        }
+
+        return {
+            warnings: warnings,
+            error: error
         }
     }
 
     async _execute(task) {
+        const warnings = [];
         if (task.type === 'add') {
             const results = await Promise.allSettled(task.products.map((product) => 
                 this.store.addToCart(product.path, product.size, product.quantity)
             ));
-            return results.map((result) => {
-                const _result = { type: task.type };
-                if (result.status === 'rejected'){
-                    _result.error = result.reason;
-                } else {
-                    _result.detail = "Added product";
-                    _result.product = result.value;
+            results.forEach((result) => {
+                if (result.status === 'rejected') {
+                    warnings.push({
+                        detail: 'Failed to add product to cart',
+                        reason: result.reason
+                    });
                 }
-                return _result;
             });
         } else {
-            const result = { type: task.type };
-            try {
-                if (task.type === 'login') {
-                    await this.store.login(task.account);
-                    result.detail = "Logged in";
-                } else if (task.type === 'logout') { 
-                    await this.store.logout();
-                    result.detail = "Logged out";
-                } else if (task.type === 'cart') {
-                    result.cart = await this.store.getCart();
-                    result.detail = "Cart";
-                } else if (task.type === 'empty') {
-                    await this.store.emptyCart();
-                    result.detail = "Emptied cart"
-                } else if (task.type === 'contact') {
-                    await this.store.setContact(task.contact);
-                    result.detail = "Contact set";
-                } else if (task.type === 'coupon') {
-                    await this.store.setCoupon(task.coupon);
-                    result.detail = "Coupon applied";
-                } else if (task.type === 'shipping') {
-                    await this.store.setShipping();
-                    result.detail = "Shipping set";
-                } else if (task.type === 'payment') { 
-                    await this.store.submitPayment(task.card, task.billing);
-                    result.detail = "Payment successful";
-                }
-            } catch (error) { result.error = error; }
-            return result
+            if (task.type === 'login') {
+                await this.store.login(task.account);
+            } else if (task.type === 'logout') { 
+                await this.store.logout();
+            } else if (task.type === 'empty') {
+                await this.store.emptyCart();
+            } else if (task.type === 'contact') {
+                const result = await this.store.setContact(task.contact);
+                if (result) warnings.push(result);
+            } else if (task.type === 'coupon') {
+                await this.store.setCoupon(task.coupon);
+            } else if (task.type === 'shipping') {
+                const result = await this.store.setShipping();
+                if (result) warnings.push(result);
+            } else if (task.type === 'payment') { 
+                const result = await this.store.submitPayment(task.card, task.billing);
+                if (result) warnings.push(result);
+            }
         }
+        return warnings;
     }
 
     _blockingTask(task) {

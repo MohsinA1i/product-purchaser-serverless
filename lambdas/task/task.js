@@ -19,11 +19,15 @@ exports.handler = async (event) => {
     await store.open();
 
     const taskManager = new TaskManager(store, request.tasks);
-    response.message = taskManager.execute();
-
+    const result = await taskManager.execute();
+    response.body.warnings = result.warnings;
+    if (result.error) {
+        response.status = 500;
+        response.body.error = result.error;
+    }
+    
     if (request.dispose) await store.dispose();
-    response.message.session = await store.close();
+    response.body.session = await store.close();
 
-    response.status(200);
     return response.value;
 };
