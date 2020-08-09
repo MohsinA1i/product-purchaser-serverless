@@ -67,7 +67,7 @@ Resources:
     Properties:
       CodeUri: lambdas/task/
       Handler: task.handler
-      MemorySize: 256
+      MemorySize: 512
       Timeout: 180
       Description: Performs actions on stores.
       Policies:
