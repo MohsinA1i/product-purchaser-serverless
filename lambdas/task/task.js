@@ -26,7 +26,11 @@ exports.handler = async (event) => {
         response.body.error = result.error;
     }
     
-    if (request.dispose) await store.dispose();
+    if (request.dispose) {
+        try {
+            await store.dispose();
+        } catch (error) { response.warnings.push(error.message) }
+    }
     response.body.session = await store.close();
 
     return response.value;

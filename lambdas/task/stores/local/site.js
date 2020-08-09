@@ -12,7 +12,7 @@ class Site {
     constructor(hostname, options) {
         this.hostname = hostname;
         this.options = options;
-        this.timeout = 10000;
+        this.timeout = 30000;
     }
 
     async open() {
@@ -32,8 +32,6 @@ class Site {
         ];
         if (this.state.proxy) 
             args.push(`--proxy-server=http://${this.state.proxy.address}:${this.state.proxy.port}`);
-
-        if (this.options.headless && this.options.captcha === undefined) this.options.headless = false;
         
         this.browser = await Puppeteer.launch({
             executablePath: await Chromium.executablePath,
@@ -142,13 +140,19 @@ class Site {
     async goto(path) {
         try {
             await this.page.goto(`https://${this.hostname}${path}`, { timeout: this.timeout, waitUntil: "domcontentloaded" });
-        } catch (error) { await this.reload(); }
+        } catch (error) { 
+            if (error.name === 'TimeoutError') await this.reload();
+            else throw error;
+        }
     }
 
     async reload() {
         try {
             await this.page.reload({ timeout: this.timeout, waitUntil: "domcontentloaded" });
-        } catch (error) { await this.reload(); }
+        } catch (error) { 
+            if (error.name === 'TimeoutError') await this.reload();
+            else throw error;
+        }
     }
 
     async where() {

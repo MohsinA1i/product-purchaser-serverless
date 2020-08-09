@@ -140,6 +140,7 @@ class Store extends Site {
 
     async submitPayment(card, contact) {
         await this.goto('payment');
+        await this.page.waitForSelector('.review-block', { timeout: this.timeout });
         await this._checkContact();   
         await this._checkShipping();
         await this._handleBilling(contact);
@@ -242,7 +243,7 @@ class Store extends Site {
 
     async _handleShipping() {
         await this.page.waitForFunction(() => !document.getElementById('continue_button').hasAttribute('disabled'),
-            { timeout: 0, polling: 'mutation' });
+            { timeout: this.timeout, polling: 'mutation' });
         await new Promise(resolve => setTimeout(resolve, 200));
         await Promise.all([
             this.click('#continue_button'),
