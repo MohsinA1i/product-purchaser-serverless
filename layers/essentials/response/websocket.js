@@ -1,8 +1,6 @@
-const WebSocket = require('ws');
-
 class Response {
-    constructor(url, functionId) {
-        this.webSocket = new WebSocket(url, [], { "headers": { "function": functionId } }); 
+    constructor(webSocket) {
+        this.webSocket = webSocket;
     }
 
     async open() {
@@ -21,7 +19,8 @@ class Response {
     }
 
     close() {
-        this.webSocket.close();
+        if (this.webSocket.readyState === WebSocket.OPEN)
+            this.webSocket.close();
     }
 }
 

@@ -1,10 +1,13 @@
-const Response = require('/opt/websocket-response.js');
+const WebSocket = require('ws');
+
+const Response = require('/opt/response/websocket.js');
 
 const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
-    const response = new Response('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080', event.functionId);
+    const response = new Response(new WebSocket('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080',
+    [], { "headers": { "function": event.functionId } }));
     await response.open();
 
     const request = event.body;
@@ -33,5 +36,5 @@ exports.handler = async (event) => {
     }
     response.body.session = await store.close();
 
-    await response.close();
+    response.close();
 };
