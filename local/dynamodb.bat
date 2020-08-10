@@ -33,6 +33,3 @@ echo Creating dynamodb container...
 :createtable
 echo Creating dynamodb table...
 @aws dynamodb create-table --table-name users --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 --endpoint-url http://localhost:8000 > nul
-
-::Scan the table using the following command
-::aws dynamodb scan --table-name users --endpoint-url http://localhost:8000

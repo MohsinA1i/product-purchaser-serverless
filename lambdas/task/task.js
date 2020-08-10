@@ -4,7 +4,7 @@ const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
     const response = new Response();
-    const request = JSON.parse(event.body);
+    const request = JSON.parse(event.body).data;
 
     const storeFactory = new StoreFactory();
     const options = {
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
     if (request.dispose) {
         try {
             await store.dispose();
-        } catch (error) { response.warnings.push(error.message) }
+        } catch (error) { response.body.warnings.push(error.message) }
     }
     response.body.session = await store.close();
 
