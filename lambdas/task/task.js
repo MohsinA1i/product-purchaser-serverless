@@ -4,7 +4,7 @@ const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
     const response = new Response();
-    const request = JSON.parse(event.body).data;
+    const request = JSON.parse(event.body);
 
     const storeFactory = new StoreFactory();
     const options = {

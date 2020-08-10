@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
-    "name": "product-purchaser-store",
-    "main": "store.js",
+    "name": "product-purchaser-task",
+    "main": "task.js",
     "dependencies": {
         "chrome-aws-lambda": "^3.1.1",
         "puppeteer-core": "^3.1.1",

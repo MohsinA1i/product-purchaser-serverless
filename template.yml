@@ -54,14 +54,12 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - DynamoDBWritePolicy:
-             TableName: 
-               Ref: UsersTable
+            TableName: !Ref UsersTable
       Layers:
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
-          TABLE_NAME: 
-            Ref: UsersTable
+          TABLE_NAME: !Ref UsersTable
 
   TaskFunction:
     Type: AWS::Serverless::Function
@@ -75,20 +73,12 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - DynamoDBCrudPolicy:
-             TableName: 
-               Ref: UsersTable
-        - Statement:
-          - Effect: Allow
-            Action:
-            - 'execute-api:ManageConnections'
-            Resource:
-            - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebsocketGateway}/*'
+            TableName: !Ref UsersTable
       Layers:
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
-          TABLE_NAME: 
-            Ref: UsersTable
+          TABLE_NAME: !Ref UsersTable
 
   EssentialsLayer:
       Type: AWS::Serverless::LayerVersion
@@ -99,57 +89,4 @@ Resources:
           CompatibleRuntimes:
             - nodejs12.x
           RetentionPolicy: Retain
-
-  WebsocketGateway:
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: WebsocketGateway
-      ProtocolType: WEBSOCKET
-      RouteSelectionExpression: "$request.body.action"
-
-  TaskRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref WebsocketGateway
-      RouteKey: task
-      AuthorizationType: NONE
-      OperationName: TaskRoute
-      Target: !Join
-        - '/'
-        - - 'integrations'
-          - !Ref TaskIntegration
-
-  TaskIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref WebsocketGateway
-      Description: Task Integration
-      IntegrationType: AWS_PROXY
-      IntegrationUri: 
-        Fn::Sub:
-            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TaskFunction.Arn}/invocations
-
-  TaskPermission:
-    Type: AWS::Lambda::Permission
-    DependsOn:
-      - WebsocketGateway
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref TaskFunction
-      Principal: apigateway.amazonaws.com
-
-  Deployment:
-    Type: AWS::ApiGatewayV2::Deployment
-    DependsOn:
-      - TaskRoute
-    Properties:
-      ApiId: !Ref WebsocketGateway
-
-  Stage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      StageName: Production
-      Description: Production Stage
-      DeploymentId: !Ref Deployment
-      ApiId: !Ref WebsocketGateway
           
