@@ -1,7 +1,8 @@
 class TaskManager {
-    constructor(store, tasks) {
+    constructor(store, tasks, response) {
         this.store = store;
         this.tasks = this._optimizeTasks(tasks);
+        this.response = response;
     }
 
     _optimizeTasks(tasks) {
@@ -26,72 +27,59 @@ class TaskManager {
         return _tasks;
     }
 
-    async execute() {
-        let error, warnings = [];
-
+    async execute(task) {
         for (const task of this.tasks) {
             try {
-                const _warnings = await this._execute(task);
-                warnings = [...warnings, ..._warnings];
-            } catch (_error) {
-                error = _error.message;
+                if (task.type === 'add') {
+                    const results = await Promise.allSettled(task.products.map((product) => 
+                        this.store.addToCart(product.path, product.size, product.quantity)
+                    ));
+                    results.forEach((result) => {
+                        if (result.status === 'rejected') {
+                            this.response.send('warning', {
+                                detail: 'Failed to add product to cart',
+                                reason: result.reason
+                            });
+                        }
+                    });
+                } else {
+                    if (task.type === 'login') {
+                        this.response.send('info', { detail: 'Logging in' });
+                        await this.store.login(task.account);
+                    } else if (task.type === 'logout') { 
+                        this.response.send('info', { detail: 'Logging out' });
+                        await this.store.logout();
+                    } else if (task.type === 'empty') {
+                        this.response.send('info', { detail: 'Emptying cart' });
+                        await this.store.emptyCart();
+                    } else if (task.type === 'contact') {
+                        this.response.send('info', { detail: 'Setting contact information' });
+                        const warnings = await this.store.setContact(task.contact);
+                        if (warnings)
+                            for (const warning of warnings)
+                                this.response.send('warning', warning);
+                    } else if (task.type === 'coupon') {
+                        this.response.send('info', { detail: 'Applying Coupon' });
+                        await this.store.setCoupon(task.coupon);
+                    } else if (task.type === 'shipping') {
+                        this.response.send('info', { detail: 'Setting shipping information' });
+                        const warnings = await this.store.setShipping();
+                        if (warnings)
+                            for (const warning of warnings)
+                                this.response.send('warning', warning);
+                    } else if (task.type === 'payment') { 
+                        this.response.send('info', { detail: 'Submitting Payment' });
+                        const warnings = await this.store.submitPayment(task.card, task.billing);
+                        if (warnings)
+                            for (const warning of warnings)
+                                this.response.send('warning', warning);
+                    }
+                }
+            } catch (error) { 
+                this.response.send('error', { detail: error.message });
                 break;
             }
         }
-
-        return {
-            warnings: warnings,
-            error: error
-        }
-    }
-
-    async _execute(task) {
-        const warnings = [];
-        if (task.type === 'add') {
-            const results = await Promise.allSettled(task.products.map((product) => 
-                this.store.addToCart(product.path, product.size, product.quantity)
-            ));
-            results.forEach((result) => {
-                if (result.status === 'rejected') {
-                    warnings.push({
-                        detail: 'Failed to add product to cart',
-                        reason: result.reason
-                    });
-                }
-            });
-        } else {
-            if (task.type === 'login') {
-                await this.store.login(task.account);
-            } else if (task.type === 'logout') { 
-                await this.store.logout();
-            } else if (task.type === 'empty') {
-                await this.store.emptyCart();
-            } else if (task.type === 'contact') {
-                const result = await this.store.setContact(task.contact);
-                if (result) warnings.push(result);
-            } else if (task.type === 'coupon') {
-                await this.store.setCoupon(task.coupon);
-            } else if (task.type === 'shipping') {
-                const result = await this.store.setShipping();
-                if (result) warnings.push(result);
-            } else if (task.type === 'payment') { 
-                const result = await this.store.submitPayment(task.card, task.billing);
-                if (result) warnings.push(result);
-            }
-        }
-        return warnings;
-    }
-
-    _blockingTask(task) {
-        if (task.type === 'login' ||
-            result.type === 'logout' ||
-            result.type === 'empty' ||
-            result.type === 'contact' ||
-            result.type === 'coupon' ||
-            result.type === 'shipping' ||
-            result.type === 'payment' ) {
-                return true;
-        } else return false;
     }
 }
 

@@ -1,10 +1,13 @@
-const Response = require('/opt/response.js');
+const Response = require('/opt/websocket-response.js');
+
 const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
-    const response = new Response();
-    const request = JSON.parse(event.body);
+    const response = new Response('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080', event.functionId);
+    await response.open();
+
+    const request = event.body;
 
     const storeFactory = new StoreFactory();
     const options = {
@@ -18,20 +21,17 @@ exports.handler = async (event) => {
     const store = storeFactory.getStore(request.hostname, options);
     await store.open();
 
-    const taskManager = new TaskManager(store, request.tasks);
-    const result = await taskManager.execute();
-    response.body.warnings = result.warnings;
-    if (result.error) {
-        response.status = 500;
-        response.body.error = result.error;
-    }
+    const taskManager = new TaskManager(store, request.tasks, response);
+    await taskManager.execute();
     
     if (request.dispose) {
         try {
             await store.dispose();
-        } catch (error) { response.body.warnings.push(error.message) }
+        } catch (error) { 
+            response.send('warning', { detail: error.message });
+        }
     }
     response.body.session = await store.close();
 
-    return response.value;
+    await response.close();
 };

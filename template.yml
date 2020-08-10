@@ -66,7 +66,7 @@ Resources:
     Properties:
       CodeUri: lambdas/task/
       Handler: task.handler
-      MemorySize: 512
+      MemorySize: 768
       Timeout: 180
       Runtime: nodejs12.x
       Description: Performs actions on stores.

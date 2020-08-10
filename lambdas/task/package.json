@@ -10,6 +10,7 @@
         "puppeteer-extra-plugin-stealth": "^2.4.14",
         "urlencode": "^1.1.0",
         "user-agents": "^1.0.559",
-        "uuid": "^8.3.0"
+        "uuid": "^8.3.0",
+        "ws": "^7.3.1"
       }
 }
