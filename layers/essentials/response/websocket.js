@@ -10,7 +10,7 @@ class Response {
     }
 
     send(type, message) {
-        if (this.webSocket.readyState === WebSocket.OPEN) {
+        if (this.webSocket.readyState === 1) {
             this.webSocket.send(JSON.stringify({
                 type: type,
                 ...message
@@ -19,7 +19,7 @@ class Response {
     }
 
     close() {
-        if (this.webSocket.readyState === WebSocket.OPEN)
+        if (this.webSocket.readyState === 1)
             this.webSocket.close();
     }
 }
