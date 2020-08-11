@@ -1,6 +1,6 @@
 const Uuid = require('uuid');
 
-const Response = require('/opt/response/http.js');
+const Response = require('/opt/response.js');
 const Database = require('/opt/database.js');
 
 exports.handler = async (event) => {

@@ -1,11 +1,59 @@
 class TaskManager {
-    constructor(store, tasks, response) {
-        this.store = store;
-        this.tasks = this._optimizeTasks(tasks);
-        this.response = response;
+    async execute(store, tasks, connection) {
+        optimizeTasks(tasks)
+        for (const task of tasks) {
+            if (task.type === 'add') {
+                connection.send('info', { detail: 'Adding to cart' });
+                const results = await Promise.allSettled(task.products.map((product) => 
+                    store.addToCart(product.path, product.size, product.quantity)
+                ));
+                results.forEach((result) => {
+                    if (result.status === 'rejected') {
+                        connection.send('warning', {
+                            task: task.type,
+                            detail: 'Failed to add product to cart',
+                            reason: result.reason
+                        });
+                    }
+                });
+            } else {
+                if (task.type === 'login') {
+                    connection.send('info', { task: task.type, detail: 'Logging in' });
+                    await store.login(task.account);
+                } else if (task.type === 'logout') { 
+                    connection.send('info', { task: task.type, detail: 'Logging out' });
+                    await store.logout();
+                } else if (task.type === 'empty') {
+                    connection.send('info', { task: task.type, detail: 'Emptying cart' });
+                    await store.emptyCart();
+                } else if (task.type === 'contact') {
+                    connection.send('info', { task: task.type, detail: 'Setting contact information' });
+                    const warnings = await store.setContact(task.contact);
+                    if (warnings)
+                        for (const warning of warnings)
+                            connection.send('warning', { task: task.type, detail: warning });
+                } else if (task.type === 'coupon') {
+                    connection.send('info', { task: task.type, detail: 'Applying coupon' });
+                    await store.setCoupon(task.coupon);
+                } else if (task.type === 'shipping') {
+                    connection.send('info', { task: task.type, detail: 'Setting shipping information' });
+                    const warnings = await store.setShipping();
+                    if (warnings)
+                        for (const warning of warnings)
+                            connection.send('warning', { task: task.type, detail: warning });
+                } else if (task.type === 'payment') { 
+                    connection.send('info', { task: task.type, detail: 'Submitting payment' });
+                    const warnings = await store.submitPayment(task.card, task.billing);
+                    if (warnings)
+                        for (const warning of warnings)
+                            connection.send('warning', { task: task.type, detail: warning });
+                    connection.send('info', { task: task.type, detail: 'Payment successful' });
+                }
+            }
+        }
     }
 
-    _optimizeTasks(tasks) {
+    optimizeTasks(tasks) {
         const _tasks = [];
         let products = [];
         let start;
@@ -25,61 +73,6 @@ class TaskManager {
         }
         if (start) _tasks.push({ type: 'add', products: products });
         return _tasks;
-    }
-
-    async execute(task) {
-        for (const task of this.tasks) {
-            try {
-                if (task.type === 'add') {
-                    const results = await Promise.allSettled(task.products.map((product) => 
-                        this.store.addToCart(product.path, product.size, product.quantity)
-                    ));
-                    results.forEach((result) => {
-                        if (result.status === 'rejected') {
-                            this.response.send('warning', {
-                                detail: 'Failed to add product to cart',
-                                reason: result.reason
-                            });
-                        }
-                    });
-                } else {
-                    if (task.type === 'login') {
-                        this.response.send('info', { detail: 'Logging in' });
-                        await this.store.login(task.account);
-                    } else if (task.type === 'logout') { 
-                        this.response.send('info', { detail: 'Logging out' });
-                        await this.store.logout();
-                    } else if (task.type === 'empty') {
-                        this.response.send('info', { detail: 'Emptying cart' });
-                        await this.store.emptyCart();
-                    } else if (task.type === 'contact') {
-                        this.response.send('info', { detail: 'Setting contact information' });
-                        const warnings = await this.store.setContact(task.contact);
-                        if (warnings)
-                            for (const warning of warnings)
-                                this.response.send('warning', warning);
-                    } else if (task.type === 'coupon') {
-                        this.response.send('info', { detail: 'Applying Coupon' });
-                        await this.store.setCoupon(task.coupon);
-                    } else if (task.type === 'shipping') {
-                        this.response.send('info', { detail: 'Setting shipping information' });
-                        const warnings = await this.store.setShipping();
-                        if (warnings)
-                            for (const warning of warnings)
-                                this.response.send('warning', warning);
-                    } else if (task.type === 'payment') { 
-                        this.response.send('info', { detail: 'Submitting Payment' });
-                        const warnings = await this.store.submitPayment(task.card, task.billing);
-                        if (warnings)
-                            for (const warning of warnings)
-                                this.response.send('warning', warning);
-                    }
-                }
-            } catch (error) { 
-                this.response.send('error', { detail: error.message });
-                break;
-            }
-        }
     }
 }
 
