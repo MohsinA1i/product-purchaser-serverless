@@ -107,7 +107,6 @@ Resources:
         ContentUri: layers/essentials/
         CompatibleRuntimes:
           - nodejs12.x
-        RetentionPolicy: Retain
       Metadata:
         BuildMethod: nodejs12.x
           

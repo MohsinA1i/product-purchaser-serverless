@@ -1,4 +1,4 @@
-const Uuid = require('uuid');
+const Uuid = require(process.env.AWS_SAM_LOCAL ? 'uuid' : '/opt/node_modules/uuid');
 const Useragent = require('user-agents');
 
 const Database = require('/opt/database.js');

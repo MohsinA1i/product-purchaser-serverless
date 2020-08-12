@@ -1,4 +1,4 @@
-const WebSocket = require('ws');
+const WebSocket = require(process.env.AWS_SAM_LOCAL ? 'ws' : '/opt/node_modules/ws');
 
 class Connection {
     constructor(url, functionId) {

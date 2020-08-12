@@ -1,4 +1,4 @@
-const Uuid = require('uuid');
+const Uuid = require(process.env.AWS_SAM_LOCAL ? 'uuid' : '/opt/node_modules/uuid');
 
 const Response =  require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/response.js' : '/opt/response.js');
 const Database = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/database.js' : '/opt/database.js');
