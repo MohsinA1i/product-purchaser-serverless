@@ -1,4 +1,4 @@
-const Connection = require('/opt/nodejs/connection.js');
+const Connection = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/connection.js' : '/opt/connection.js');
 
 const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');

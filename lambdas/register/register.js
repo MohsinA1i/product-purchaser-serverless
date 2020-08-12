@@ -1,7 +1,7 @@
 const Uuid = require('uuid');
 
-const Response =  require('/opt/nodejs/response.js');
-const Database = require('/opt/nodejs/database.js');
+const Response =  require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/response.js' : '/opt/response.js');
+const Database = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/database.js' : '/opt/database.js');
 
 exports.handler = async (event) => {
     const response = new Response();
