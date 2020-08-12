@@ -1,5 +1,3 @@
-const WebSocket = require('ws');
-
 const Connection = require('./connection.js');
 
 exports.handler = async (event) => {
