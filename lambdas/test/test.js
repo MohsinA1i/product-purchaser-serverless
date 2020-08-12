@@ -1,4 +1,4 @@
-const Connection = require('./connection.js');
+const Connection = require('/opt/nodejs/connection.js');
 
 exports.handler = async (event) => {
     const connection = new Connection('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080', event.functionId);

@@ -1,0 +1,6 @@
+{
+    "version": "1.0.0",
+    "name": "product-purchaser-test",
+    "main": "test.js",
+    "dependencies": {}
+}

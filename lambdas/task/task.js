@@ -1,4 +1,4 @@
-const Connection = require('/opt/connection.js');
+const Connection = require('/opt/nodejs/connection.js');
 
 const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');

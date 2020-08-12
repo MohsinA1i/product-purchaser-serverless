@@ -56,7 +56,6 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref UsersTable
       Layers:
-        - !Ref DependenciesLayer
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
@@ -76,7 +75,6 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref UsersTable
       Layers:
-        - !Ref DependenciesLayer
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
@@ -96,30 +94,20 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
       Layers:
-        - !Ref DependenciesLayer
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
           TABLE_NAME: !Ref UsersTable
 
-  DependenciesLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: DependenciesLayer
-      ContentUri: layers/dependencies/
-      CompatibleRuntimes:
-        - nodejs12.x
-      RetentionPolicy: Retain
-    Metadata:
-      BuildMethod: nodejs12.x
-
   EssentialsLayer:
       Type: AWS::Serverless::LayerVersion
       Properties:
-          LayerName: EssentialsLayer
-          Description: Essential Dependencies
-          ContentUri: layers/essentials/
-          CompatibleRuntimes:
-            - nodejs12.x
-          RetentionPolicy: Retain
+        LayerName: EssentialsLayer
+        Description: Essential Dependencies
+        ContentUri: layers/essentials/
+        CompatibleRuntimes:
+          - nodejs12.x
+        RetentionPolicy: Retain
+      Metadata:
+        BuildMethod: nodejs12.x
           

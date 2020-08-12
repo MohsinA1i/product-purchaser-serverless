@@ -5,7 +5,6 @@ phases:
       # Install all dependencies
       - cd lambdas/register && npm install --production; cd ../..
       - cd lambdas/task && npm install --production; cd ../..
-      - cd layers/dependencies && npm install --production; cd ../..
   build:
     commands:
       # Use AWS SAM to package the application by using AWS CloudFormation
