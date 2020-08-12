@@ -1,7 +1,7 @@
 const Uuid = require(process.env.AWS_SAM_LOCAL ? 'uuid' : '/opt/node_modules/uuid');
 const Useragent = require('user-agents');
 
-const Database = require('/opt/database.js');
+const Database = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/database.js' : '/opt/database.js');
 
 class StateManager {
     constructor(userId) {

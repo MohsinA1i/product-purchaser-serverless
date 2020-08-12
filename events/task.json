@@ -1,6 +1,6 @@
 {
     "body": {
-        "hostname": "shopnicekicks.com",
+        "hostname": "kith.com",
         "id": "980f714d-eaa6-4d9d-8859-10917dd93486",
         "captcha": "647539bd0c6b8a305cc1f410d9c1cb17",
         "account": {
@@ -11,7 +11,7 @@
             {
                 "type": "add",
                 "product": {
-                    "path": "/products/air-zoom-spiridon-cage-2-womens-lifestyle-shoe-white-black-pink",
+                    "path": "/collections/puma/products/pu37488101",
                     "quantity": 1
                 }
             },

@@ -24,11 +24,11 @@ exports.handler = async (event) => {
     connection.onClose(async () => {
         if (request.dispose) await store.dispose();
         await store.close();
-    })
+    });
 
-    const taskManager = new TaskManager(store, request.tasks, connection);
+    const taskManager = new TaskManager();
     try {
-        await taskManager.execute();
+        await taskManager.execute(store, request.tasks, connection);
         connection.close(1000, 'Successful');
     } catch (error) { 
         connection.close(1001, error.message);
