@@ -1,6 +1,8 @@
+const WebSocket = require('ws');
+
 class Connection {
-    constructor(webSocket) {
-        this.webSocket = webSocket;
+    constructor(url, functionId) {
+        this.webSocket = new WebSocket(url, [], { "headers": { "function": functionId } });
     }
 
     open() {

@@ -42,6 +42,26 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
+  TestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/test/
+      Handler: test.handler
+      MemorySize: 128
+      Timeout: 30
+      Runtime: nodejs12.x
+      Description: Facilitates testing.
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBWritePolicy:
+            TableName: !Ref UsersTable
+      Layers:
+        - !Ref DependenciesLayer
+        - !Ref EssentialsLayer
+      Environment: 
+        Variables: 
+          TABLE_NAME: !Ref UsersTable
+
   RegisterFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -56,6 +76,7 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref UsersTable
       Layers:
+        - !Ref DependenciesLayer
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
@@ -75,10 +96,22 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
       Layers:
+        - !Ref DependenciesLayer
         - !Ref EssentialsLayer
       Environment: 
         Variables: 
           TABLE_NAME: !Ref UsersTable
+
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: DependenciesLayer
+      ContentUri: layers/dependencies/
+      CompatibleRuntimes:
+        - nodejs12.x
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: nodejs12.x
 
   EssentialsLayer:
       Type: AWS::Serverless::LayerVersion

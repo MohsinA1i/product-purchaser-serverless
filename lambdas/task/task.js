@@ -1,17 +1,10 @@
-const WebSocket = require('ws');
-
 const Connection = require('/opt/connection.js');
 
 const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
-    const websocket = new WebSocket(
-        'ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080',
-        [],
-        { "headers": { "function": event.functionId } }
-    );
-    const connection = new Connection(websocket);
+    const connection = new Connection('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080', event.functionId);
     await connection.open();
 
     const request = event.body;

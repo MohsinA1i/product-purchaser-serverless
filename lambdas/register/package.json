@@ -2,7 +2,5 @@
     "version": "1.0.0",
     "name": "product-purchaser-register",
     "main": "register.js",
-    "dependencies": {
-        "uuid": "^8.1.0"
-    }
+    "dependencies": {}
 }
