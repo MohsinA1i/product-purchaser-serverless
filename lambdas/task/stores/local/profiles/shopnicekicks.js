@@ -33,6 +33,31 @@ class Nicekicks extends Store {
         }, this.params(), `https://${this.hostname}/cart.js`, `https://${this.hostname}/`);
     }
 
+    async clearRequest() {
+        if (await this.where() === undefined) await this.goto('home');
+
+        return await this.page.evaluate(async (params, url, referrer) => {
+            params.referrer = referrer;
+            params.body = null;
+            params.method = "POST";
+
+            const response = await fetch(url, params);
+            return await response.json();
+        }, this.params(), `https://${this.hostname}/cart/clear.js`, `https://${this.hostname}/cart`);
+    }
+
+    async findRequest(keywords) {
+        if (await this.where() === undefined) await this.goto('home');
+
+        return await this.page.evaluate(async (params, url, referrer) => {
+            params.referrer = referrer;
+            params.body = null;
+            params.method = "GET";
+
+            const response = await fetch(url, params);
+            return await response.json();
+        }, this.params(), `https://${this.hostname}/search/suggest.json?q=${keywords.join('%20')}&resources[type]=product`, `https://${this.hostname}/`);
+    }
     
     async productRequest(handle, referrer) {
         if (await this.where() === undefined) await this.goto('home');
@@ -64,19 +89,6 @@ class Nicekicks extends Store {
         }, this.params(), `https://${this.hostname}/cart/add.js`, `{ "id": "${id}", "quantity": "${quantity}" }`, `https://${this.hostname}${referrer}`);
         if (response.status) throw new Error(response.description);
         return response;
-    }
-
-    async clearRequest() {
-        if (await this.where() === undefined) await this.goto('home');
-
-        return await this.page.evaluate(async (params, url, referrer) => {
-            params.referrer = referrer;
-            params.body = null;
-            params.method = "POST";
-
-            const response = await fetch(url, params);
-            return await response.json();
-        }, this.params(), `https://${this.hostname}/cart/clear.js`, `https://${this.hostname}/cart`);
     }
 }
 

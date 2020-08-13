@@ -1,0 +1,31 @@
+{
+    "id": {
+        "S": "12f1fe7c-5110-41ed-a6fc-bf6885e77aa0"
+    },
+    "account": {
+        "M": {}
+    },
+    "contact": {
+        "M": {}
+    },
+    "proxy": {
+        "M": {
+            "direct": {
+                "M": {
+                    "usage": {
+                        "M": {}
+                    },
+                    "fingerprint": {
+                        "L": []
+                    }
+                }
+            }
+        }
+    },
+    "fingerprint": {
+        "M": {}
+    },
+    "session": {
+        "M": {}
+    }
+}

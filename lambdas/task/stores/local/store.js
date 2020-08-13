@@ -74,6 +74,28 @@ class Store extends Site {
         return this.state.session.details.cart;
     }
 
+    async findPath(keywords) {
+        const products = (await this.findRequest(keywords)).resources.results.products;
+        if (products.length == 0) throw new Error('No product matching keywords');
+        return products[0].url
+    }
+
+    async checkAvailability(path, size) {
+        path = path.match(/(?:https?:\/\/)?(?:[^\/]+)([^\s]+)/)[1];
+        const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
+        const product =  await this.productRequest(handle, path);
+
+        if (size === undefined) { 
+            const variant = product.variants.find(variant => variant.option1 === size ||
+                variant.option2 === size ||
+                variant.option3 === size); 
+            if (variant === undefined) throw new Error(`Product ${product.title} has no size ${size}'`);
+            return variant.available;
+        } else {
+            return product.available;
+        }
+    }
+
     async addToCart(path, size, quantity = 1) {
         path = path.match(/(?:https?:\/\/)?(?:[^\/]+)([^\s]+)/)[1];
         const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
@@ -140,7 +162,7 @@ class Store extends Site {
 
     async submitPayment(card, contact) {
         await this.goto('payment');
-        await this.page.waitForSelector('.review-block', { timeout: this.timeout });
+        await this.page.waitForSelector('.review-block', { timeout: 0 });
         await this._checkContact();   
         await this._checkShipping();
         await this._handleBilling(contact);
@@ -243,7 +265,7 @@ class Store extends Site {
 
     async _handleShipping() {
         await this.page.waitForFunction(() => !document.getElementById('continue_button').hasAttribute('disabled'),
-            { timeout: this.timeout, polling: 'mutation' });
+            { timeout: 0, polling: 'mutation' });
         await new Promise(resolve => setTimeout(resolve, 200));
         await Promise.all([
             this.click('#continue_button'),
