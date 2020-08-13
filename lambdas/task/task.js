@@ -4,7 +4,7 @@ const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
-    const connection = new Connection('wss://echo.websocket.org', event.functionId);
+    const connection = new Connection('ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080', event.functionId);
     await connection.open();
 
     const request = event.body;
