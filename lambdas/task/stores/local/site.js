@@ -113,12 +113,10 @@ class Site {
         });
     }
 
-    get isOpen() {
-        if (this.browser === undefined) return false;
-        return this.browser.isConnected();
-    }
-
     async close(save) {
+        if (this.closed) return;
+        this.closed = true;
+        
         const services = [
             'https://google.com',
             'https://assets.hcaptcha.com',
