@@ -1,8 +1,8 @@
 const Site = require('./site.js');
 
 class Store extends Site {
-    constructor(hostname, options) {
-        super(hostname, options);
+    constructor(hostname) {
+        super(hostname);
     }
 
     async login(account) {
@@ -187,7 +187,6 @@ class Store extends Site {
     async dispose() {
         if (this.state.session.details.cart) await this.emptyCart();
         if (this.state.session.details.account) await this.logout();
-        super.dispose();
     }
 
     async _checkContact() {

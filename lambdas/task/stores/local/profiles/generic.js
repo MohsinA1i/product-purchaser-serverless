@@ -1,8 +1,8 @@
 const Store = require('../store.js')
 
 class Generic extends Store {
-    constructor(hostname, options) {
-        super(hostname, options);
+    constructor(hostname) {
+        super(hostname);
     }
 
     params () {

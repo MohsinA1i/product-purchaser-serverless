@@ -1,8 +1,8 @@
 const Store = require('../store.js')
 
 class Kith extends Store {
-    constructor(options) {
-        super("kith.com", options);
+    constructor() {
+        super("kith.com");
     }
 
     params () {

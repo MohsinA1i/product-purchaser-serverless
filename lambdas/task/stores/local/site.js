@@ -9,13 +9,14 @@ Puppeteer.use(StealthPlugin());
 const StateManager = require('./state-manager.js'); 
 
 class Site {
-    constructor(hostname, options) {
+    constructor(hostname) {
         this.hostname = hostname;
-        this.options = options;
         this.timeout = 10000;
     }
 
-    async open() {
+    async open(options) {
+        this.options = options;
+
         this.state = new StateManager(this.options.userId);
         if (this.options.session) 
             await this.state.load(this.options.session);
@@ -112,25 +113,29 @@ class Site {
         });
     }
 
-    async dispose() {
-        delete this.state.session;
+    get isOpen() {
+        if (this.browser === undefined) return false;
+        return this.browser.isConnected();
     }
 
-    async close() {
+    async close(save) {
         const services = [
             'https://google.com',
             'https://assets.hcaptcha.com',
             'https://shopify.com'
         ];
-        if (this.state.session) {
+        if (save === 0) {
             this.state.session.cookies = await this.page.cookies(`https://${this.hostname}`);
             this.state.fingerprint.cookies = await this.page.cookies(...services);
-        } else {
+        } else if (save === 1) {
+            this.dispose();
             this.state.fingerprint.cookies = await this.page.cookies(`https://${this.hostname}`, ...services);
-        }       
+        } else {
+            this.state.fingerprint.cookies = await this.page.cookies(...services);
+        }   
         await this.page.close();
         await this.browser.close();
-        await this.state.save();
+        await this.state.save(save === 0);
         return this.state.sessionId;
     }
 

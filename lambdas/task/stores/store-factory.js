@@ -1,29 +1,35 @@
 class StoreFactory {
+    static environment = {
+        LOCAL: 0,
+        AWS: 1
+    }
+
     static proxy = {
         DIRECT: 0,
         RANDOM: 1,
         BOTH: 2
     }
 
-    static environment = {
-        LOCAL: 0,
-        AWS: 1
+    static save = {
+        SESSION: 0,
+        DISPOSE_SESSION: 1,
+        DISCARD_SESSION: 2
     }
 
-    getStore(url, options) {
+    getStore(url, options = {}) {
         const hostname = url.match(/(?:https?:\/\/)?([^\/]+)/)[1];
-        if (options.store === StoreFactory.environment.AWS) {
+        if (options.environment === StoreFactory.environment.AWS) {
             const Store = require('./aws/aws-store.js');
-            return new Store(hostname, options);
+            return new Store(hostname);
         } else {
             const domain = hostname.match(/(?:www\.)?([^\/.]+)/)[1];
             const supported = this.supportedStore(domain);
             if (supported) {
                 const Store = require(`./local/profiles/${domain}.js`);
-                return new Store(options);
+                return new Store();
             } else {
                 const Store = require(`./local/profiles/generic.js`);
-                return new Store(hostname, options);
+                return new Store(hostname);
             }
         }
     }

@@ -10,6 +10,7 @@ exports.handler = async (event) => {
     const request = event.body;
 
     const storeFactory = new StoreFactory();
+    const store = storeFactory.getStore(request.hostname);
     const options = {
         userId: request.id,
         session: request.session,
@@ -18,19 +19,19 @@ exports.handler = async (event) => {
         account: request.account,
         headless: true
     };
-    const store = storeFactory.getStore(request.hostname, options);
-    await store.open();
+    await store.open(options);
 
-    connection.onClose(async () => {
-        if (request.dispose) await store.dispose();
-        await store.close();
+    connection.onClose(async (code, reason) => {
+        if (store.isOpen) await store.close(StoreFactory.save.DISCARD_SESSION);
     });
 
     const taskManager = new TaskManager();
     try {
         await taskManager.execute(store, request.tasks, connection);
+        await store.close(request.save);
         connection.close(1000, '');
-    } catch (error) { 
+    } catch (error) {
+        await store.close(request.save);
         connection.close(1001, error.message);
     }
 };

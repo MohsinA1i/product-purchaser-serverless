@@ -1,6 +1,6 @@
 class TaskManager {
     async execute(store, tasks, connection) {
-        tasks = this.optimizeTasks(tasks)
+        tasks = this.optimizeTasks(tasks);
         for (const task of tasks) {
             if (task.type === 'add') {
                 connection.send('info', { detail: 'Adding to cart' });

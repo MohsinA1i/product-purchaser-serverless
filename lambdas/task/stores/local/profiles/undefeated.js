@@ -1,8 +1,8 @@
 const Store = require('../store.js')
 
 class Undefeated extends Store {
-    constructor(options) {
-        super("undefeated.com", options);
+    constructor() {
+        super("undefeated.com");
     }
 
     params () {

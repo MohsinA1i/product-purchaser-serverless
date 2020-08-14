@@ -1,8 +1,8 @@
 const Store = require('../store.js')
 
 class Cncpts extends Store {
-    constructor(options) {
-        super("cncpts.com", options);
+    constructor() {
+        super("cncpts.com");
     }
 
     params () {

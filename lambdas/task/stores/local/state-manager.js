@@ -107,22 +107,23 @@ class StateManager {
         this.database.buildQuery('add', 'session', this.sessionId, this.session);
     }
 
-    async save() {
+    async save(session) {
         this.database.createQuery();
 
-        if (this.session) {
+        const fingerprintUpdate = { 
+            cookies: this.fingerprint.cookies, 
+            session: session ? this.sessionId : undefined
+        };
+        this.database.buildQuery('update', 'fingerprint', this.fingerprintId, fingerprintUpdate);
+
+        if (session) {
             const sessionUpdate = {
                 details: this.session.details,
                 cookies: this.session.cookies
-            }
+            };
             this.database.buildQuery('update', 'session', this.sessionId, sessionUpdate);
-        } else {
-            const fingerprintUpdate = { cookies: this.fingerprint.cookies, session: undefined };
-            this.database.buildQuery('remove', 'session', this.sessionId);
-            this.database.buildQuery('update', 'fingerprint', this.fingerprintId, fingerprintUpdate);
-        }
+        } else this.database.buildQuery('remove', 'session', this.sessionId);
         
-
         await this.database.executeQuery(this.data.id);
     }
 }

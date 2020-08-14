@@ -1,8 +1,8 @@
 const Store = require('../store.js')
 
 class Deadstock extends Store {
-    constructor(options) {
-        super("www.deadstock.ca", options);
+    constructor() {
+        super("www.deadstock.ca");
     }
 
     params () {
