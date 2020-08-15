@@ -4,11 +4,13 @@ const StoreFactory = require('./stores/store-factory.js');
 const TaskManager = require('./task-manager.js');
 
 exports.handler = async (event) => {
-    const connection = new Connection(
-        process.env.AWS_SAM_LOCAL ? 'ws://host.docker.internal:8080' : 'ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080',
+    const connection = new Connection();
+    await connection.open(
+        process.env.AWS_SAM_LOCAL ?
+        'ws://host.docker.internal:8080' :
+        'ws://product-purchaser-gateway.us-east-1.elasticbeanstalk.com:8080',
         event.functionId
     );
-    await connection.open();
 
     const request = event.body;
 
@@ -24,14 +26,12 @@ exports.handler = async (event) => {
     };
     await store.open(options);
 
-    connection.onClose(async (code, reason) => {
-        await store.close(StoreFactory.save.DISCARD_SESSION);
-    });
-
     const taskManager = new TaskManager();
+    connection.onClose(async (code, reason) => { await taskManager.abort(); }); 
     const error = await taskManager.execute(store, request.tasks, connection);
     
     await store.close(request.save);
+
     if (error)
         connection.close(1001, error.message);
     else 

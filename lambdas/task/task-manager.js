@@ -3,6 +3,7 @@ class TaskManager {
         tasks = this.optimizeTasks(tasks);
         try {
             for (const task of tasks) {
+                if (this.aborted) throw new Error('Aborted');
                 if (task.type === 'add') {
                     connection.send('info', { detail: 'Adding to cart' });
                     const results = await Promise.allSettled(task.products.map((product) =>
@@ -55,6 +56,10 @@ class TaskManager {
         } catch (error) {
             return error;
         }
+    }
+
+    async abort() {
+        this.aborted = true;
     }
 
     optimizeTasks(tasks) {

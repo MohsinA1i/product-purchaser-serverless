@@ -85,7 +85,7 @@ class Store extends Site {
         const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
         const product =  await this.productRequest(handle, path);
 
-        if (size === undefined) { 
+        if (size) { 
             const variant = product.variants.find(variant => variant.option1 === size ||
                 variant.option2 === size ||
                 variant.option3 === size); 
@@ -102,16 +102,16 @@ class Store extends Site {
         let product =  await this.productRequest(handle, path);
 
         let id;
-        if (size === undefined) {
-            const variant = product.variants.find((variant) => variant.available);
-            if (variant === undefined) throw new Error(`Product ${product.title} is not available`);
-            id = variant.id;
-        } else {
+        if (size) {
             const variant = product.variants.find(variant => variant.option1 === size ||
                 variant.option2 === size ||
                 variant.option3 === size); 
             if (variant === undefined) throw new Error(`Product ${product.title} has no size ${size}'`);
             if (variant.available === false) throw new Error(`Product ${product.title} is not available in size ${size}`)
+            id = variant.id;
+        } else {
+            const variant = product.variants.find((variant) => variant.available);
+            if (variant === undefined) throw new Error(`Product ${product.title} is not available`);
             id = variant.id;
         }
 

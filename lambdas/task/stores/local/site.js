@@ -114,9 +114,6 @@ class Site {
     }
 
     async close(save) {
-        if (this.closed) return;
-        this.closed = true;
-        
         const services = [
             'https://google.com',
             'https://assets.hcaptcha.com',
@@ -130,11 +127,15 @@ class Site {
             this.state.fingerprint.cookies = await this.page.cookies(`https://${this.hostname}`, ...services);
         } else {
             this.state.fingerprint.cookies = await this.page.cookies(...services);
-        }   
+        }  
+
         await this.page.close();
         await this.browser.close();
-        await this.state.save(save === 0);
-        return this.state.sessionId;
+
+        if (save === 0) {
+            await this.state.save(true);
+            return this.state.sessionId;
+        } else await this.state.save(false);
     }
 
     async goto(path) {
