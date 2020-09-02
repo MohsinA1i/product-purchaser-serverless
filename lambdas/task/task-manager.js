@@ -1,6 +1,5 @@
 class TaskManager {
     async execute(store, tasks) {
-        tasks = this.optimizeTasks(tasks);
         for (const task of tasks) {
             if (task.type === 'login') {
                 await store.login(task.account);
