@@ -38,4 +38,5 @@ exports.handler = async (event) => {
         if (store.state === 0) connection.close(1000);
         else connection.close(1001, error.message);
     }
+    await store.close(request.save);
 };
