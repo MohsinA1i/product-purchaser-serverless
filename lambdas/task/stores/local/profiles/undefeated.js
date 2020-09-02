@@ -1,8 +1,8 @@
-const Store = require('../store.js')
+const Store = require('../store')
 
 class Undefeated extends Store {
-    constructor() {
-        super("undefeated.com");
+    constructor(hostname) {
+        super(hostname);
     }
 
     params () {
@@ -66,17 +66,15 @@ class Undefeated extends Store {
     async productRequest(handle, referrer) {
         if (await this.where() === undefined) await this.goto('home');
 
-        try {
-            return await this.page.evaluate(async (params, url, referrer) => {
-                params["content-type"] = "application/json"
-                params.referrer = referrer;
-                params.body = null;
-                params.method = "GET";
+        return await this.page.evaluate(async (params, url, referrer) => {
+            params["content-type"] = "application/json"
+            params.referrer = referrer;
+            params.body = null;
+            params.method = "GET";
 
-                const response = await fetch(url, params);
-                return await response.json();
-            }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
-        } catch (error) { throw new Error(`No product '${handle}'`); }
+            const response = await fetch(url, params);
+            return await response.json();
+        }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
     }
 
     async addRequest(id, quantity, referrer) {
@@ -84,7 +82,7 @@ class Undefeated extends Store {
 
         const body = "------WebKitFormBoundaryB2eEAErUoWqYssua\r\nContent-Disposition: form-data; name=\"form_type\"\r\n\r\nproduct\r\n------WebKitFormBoundaryB2eEAErUoWqYssua\r\nContent-Disposition: form-data; name=\"utf8\"\r\n\r\n✓\r\n------WebKitFormBoundaryB2eEAErUoWqYssua\r\nContent-Disposition: form-data; name=\"id\"\r\n\r\n" + id + "\r\n------WebKitFormBoundaryB2eEAErUoWqYssua--\r\n"
 
-       const response = await this.page.evaluate(async (params, url, body, referrer) => {
+       return await this.page.evaluate(async (params, url, body, referrer) => {
             params.headers["content-type"] = "multipart/form-data; boundary=----WebKitFormBoundaryB2eEAErUoWqYssua";
             params.referrer = referrer;
             params.body = body;
@@ -93,8 +91,6 @@ class Undefeated extends Store {
             const response = await fetch(url, params);
             return await response.json();
         }, this.params(), `https://${this.hostname}/cart/add.js`, body, `https://${this.hostname}${referrer}`);
-        if (response.status) throw new Error(response.description);
-        return response;
     }
 }
 

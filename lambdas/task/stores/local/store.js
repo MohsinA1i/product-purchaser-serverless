@@ -1,4 +1,4 @@
-const Site = require('./site.js');
+const Site = require('./site');
 
 class Store extends Site {
     constructor(hostname) {
@@ -6,6 +6,7 @@ class Store extends Site {
     }
 
     async login(account) {
+        this.setStatus(Site.status.LOGIN);
         let here = await this.goto('account');
         if (here === 'account') return;
 
@@ -33,7 +34,7 @@ class Store extends Site {
         if (here === 'login') {
             throw new Error('Login Failed');
         } else {
-            this.state.session.details.account = account;
+            this.stateManager.session.details.account = account;
         }
     }
 
@@ -46,7 +47,7 @@ class Store extends Site {
             this.page.waitForNavigation({ timeout: this.timeout, waitUntil: "domcontentloaded" })
         ]);   
 
-        delete this.state.session.details.account;
+        delete this.stateManager.session.details.account;
     }
 
     async getCart() {
@@ -67,81 +68,84 @@ class Store extends Site {
         if (items.length > 0) {
             const cart = {}
             for (const item of items) cart[item.id] = item;
-            this.state.session.details.cart = cart;
+            this.stateManager.session.details.cart = cart;
         } else 
-            delete this.state.session.details.cart;
+            delete this.stateManager.session.details.cart;
 
-        return this.state.session.details.cart;
-    }
-
-    async findPath(keywords) {
-        const products = (await this.findRequest(keywords)).resources.results.products;
-        if (products.length == 0) throw new Error('No product matching keywords');
-        return products[0].url
-    }
-
-    async checkAvailability(path, size) {
-        path = path.match(/(?:https?:\/\/)?(?:[^\/]+)([^\s]+)/)[1];
-        const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
-        const product =  await this.productRequest(handle, path);
-
-        if (size) { 
-            const variant = product.variants.find(variant => variant.option1 === size ||
-                variant.option2 === size ||
-                variant.option3 === size); 
-            if (variant === undefined) throw new Error(`Product ${product.title} has no size ${size}'`);
-            return variant.available;
-        } else {
-            return product.available;
-        }
-    }
-
-    async addToCart(path, size, quantity = 1) {
-        path = path.match(/(?:https?:\/\/)?(?:[^\/]+)([^\s]+)/)[1];
-        const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
-        let product =  await this.productRequest(handle, path);
-
-        let id;
-        if (size) {
-            const variant = product.variants.find(variant => variant.option1 === size ||
-                variant.option2 === size ||
-                variant.option3 === size); 
-            if (variant === undefined) throw new Error(`Product ${product.title} has no size ${size}'`);
-            if (variant.available === false) throw new Error(`Product ${product.title} is not available in size ${size}`)
-            id = variant.id;
-        } else {
-            const variant = product.variants.find((variant) => variant.available);
-            if (variant === undefined) throw new Error(`Product ${product.title} is not available`);
-            id = variant.id;
-        }
-
-        product = await this.addRequest(id, quantity, path);
-
-        const item = {
-            id: product.id,
-            name: product.product_title,
-            size: product.variant_title,
-            price: product.price,
-            quantity: product.quantity,
-            path: product.url.match(/[^?]+/)[0],
-            image: product.image
-        }
-        if (this.state.session.details.cart === undefined) this.state.session.details.cart = {};
-        this.state.session.details.cart[id] = item;
-        return item;
+        return this.stateManager.session.details.cart;
     }
 
     async emptyCart() {
         await this.clearRequest();
-        delete this.state.session.details.cart;
+        delete this.stateManager.session.details.cart;
+    }
+
+    async searchKeywords(keywords, retry = true) {
+        this.setStatus(Site.status.KEYWORDS);
+        while (true) {
+            const products = (await this.findRequest(keywords)).resources.results.products;
+            if (products.length == 0) {
+                if (retry) continue;
+                else throw new Error('No product matching keywords');
+            }
+            const product = products[0];
+            return {
+                id: product.id,
+                name: product.title,
+                price: product.price,
+                path: product.url.match(/[^?]+/)[0],
+                image: product.image
+            }
+        }
+    }
+
+    async addToCart(path, size, quantity = 1, retry = true) {
+        this.setStatus(Site.status.STOCK);
+        path = path.match(/(?:https?:\/\/)?(?:[^\/]*)([^\s]*)/)[1];
+        const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
+        while (true) {
+            let product = await this.productRequest(handle, path);
+
+            let variant;
+            if (size) {
+                variant = product.variants.find(variant => variant.available && 
+                    (variant.option1 === size ||
+                    variant.option2 === size ||
+                    variant.option3 === size)); 
+            } else {
+                variant = product.variants.find((variant) => variant.available);
+            }
+            if (variant === undefined) {
+                if (retry) continue;
+                else if (size) throw new Error(`Product ${product.title} is not available in size ${size}`);
+                else throw new Error(`Product ${product.title} is not available`);
+            }
+
+            let response = await this.addRequest(variant.id, quantity, path);
+            if (response.status) {
+                if (retry) continue;
+                else throw new Error(response.description);
+            } else product = response;
+
+            const item = {
+                id: product.product_id,
+                name: product.product_title,
+                size: product.variant_title,
+                price: product.price,
+                quantity: product.quantity,
+                path: product.url.match(/[^?]+/)[0],
+                image: product.image
+            }
+            if (this.stateManager.session.details.cart === undefined) this.stateManager.session.details.cart = {};
+            this.stateManager.session.details.cart[variant.id] = item;
+            return item;
+        }
     }
 
     async setContact(contact) {
         await this.goto('contact_information');
         await this._handleContact(contact);
-        this.state.session.details.contact = contact;
-
-        return this.warnings;
+        this.stateManager.session.details.contact = contact;
     }
 
     async setCoupon(coupon) {
@@ -155,9 +159,7 @@ class Store extends Site {
         await this.goto('shipping');
         await this._checkContact();
         await this._handleShipping();
-        this.state.session.details.shipping = 0;
-
-        return this.warnings;
+        this.stateManager.session.details.shipping = 0;
     }
 
     async submitPayment(card, contact) {
@@ -175,18 +177,16 @@ class Store extends Site {
         }
 
         if (here === 'payment') {
-            this.state.session.details.payment = 1;
+            this.stateManager.session.details.payment = 1;
             throw new Error(await this._handleFailure());
         } else if (here === 'thank_you') {
-            this.state.session.details.payment = 0;
+            this.stateManager.session.details.payment = 0;
         }
-
-        return this.warnings;
     }
 
     async dispose() {
-        if (this.state.session.details.cart) await this.emptyCart();
-        if (this.state.session.details.account) await this.logout();
+        if (this.stateManager.session.details.cart) await this.emptyCart();
+        if (this.stateManager.session.details.account) await this.logout();
     }
 
     async _checkContact() {
@@ -206,6 +206,7 @@ class Store extends Site {
     }
 
     async _handleContact(contact) {
+        this.setStatus(Site.status.CONTACT);
         const fields = {
             'checkout_shipping_address_first_name': contact.firstName,
             'checkout_shipping_address_last_name': contact.lastName,
@@ -232,16 +233,19 @@ class Store extends Site {
             if (element) element.value = company;
         }, contact.company);
 
-        try {
-            await this.page.select('#checkout_shipping_address_country', contact.country);
-        } catch (error) { throw new Error('Unexpected value for country'); }
+        let valid = await this.page.evaluate((country) => {
+            return document.querySelector(`#checkout_shipping_address_country [value="${country}"]`) !== null;
+        }, contact.country);
+        if (!valid) throw new Error('Unexpected value for country');
+        await this.page.select('#checkout_shipping_address_country', contact.country);
 
-        try {
-            await this.page.$eval('#checkout_shipping_address_province', (element, state) => {
-                if (element.disabled) return;
-                element.value = element.querySelector(`[data-alternate-values*="${state}"]`).value;
+        valid = await this.page.$eval('#checkout_shipping_address_province', (element, state) => {
+                if (element.disabled) return true;
+                const option = element.querySelector(`[data-alternate-values*='"${state}"']`);
+                if (option) element.value = option.value;
+                return option !== null;
             }, contact.state);
-        } catch (error) { throw new Error('Unexpected value for state'); }
+        if (!valid) throw new Error('Unexpected value for state');
 
         await this.page.evaluate((phone) => {
             let element = document.querySelector('#checkout_shipping_address_phone');
@@ -263,6 +267,7 @@ class Store extends Site {
     }
 
     async _handleShipping() {
+        this.setStatus(Site.status.SHIPPING);
         await this.page.waitForFunction(() => !document.getElementById('continue_button').hasAttribute('disabled'),
             { timeout: 0, polling: 'mutation' });
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -273,11 +278,14 @@ class Store extends Site {
     }
 
     async _handleCoupon(coupon) {
-        try {
-            await this.page.$eval('[name="checkout[reduction_code]"]', (element, coupon) => {
-                element.value = coupon;
-            }, coupon);
-        } catch (error) { throw new Error('Coupons not supported') }
+        this.setStatus(Site.status.COUPON);
+        const missing = await this.page.evaluate(() => {
+            return document.querySelector(`[name="checkout[reduction_code]"]`) === null;
+        });
+        if (missing) throw new Error('Coupons not supported')
+        await this.page.$eval('[name="checkout[reduction_code]"]', (element, coupon) => {
+            element.value = coupon;
+        }, coupon);
         await Promise.all([
             this.page.evaluate(() => {
                 const path = '//input[@name="checkout[reduction_code]"]/ancestor::form//*[@type="submit"]';
@@ -294,13 +302,18 @@ class Store extends Site {
     }
 
     async _handleBilling(contact) {
-        try {
-            if (contact === undefined) {  
-                return await this.page.click('#checkout_different_billing_address_false');
-            } else {
-                await this.page.click('#checkout_different_billing_address_true');
-            }
-        } catch (error) { return; }
+        const missing = await this.page.evaluate(() => {
+            const radio = document.querySelector(`#checkout_different_billing_address_true`);
+            if (radio) return radio.offsetParent === null;
+            else return true;
+        });
+        if (missing) {
+            if (contact) throw new Error('Billing information is not supported');
+            return;
+        } else {
+            if (contact) await this.page.click('#checkout_different_billing_address_true');
+            else { return await this.page.click('#checkout_different_billing_address_false'); }
+        }
 
         const fields = {
             'checkout_billing_address_first_name': contact.firstName,
@@ -322,16 +335,19 @@ class Store extends Site {
             if (element) element.value = company;
         }, contact.company);
 
-        try {
-            await this.page.select('#checkout_billing_address_country', contact.country);
-        } catch (error) { throw new Error('Unexpected value for country'); }
+        let valid = await this.page.evaluate((country) => {
+            return document.querySelector(`#checkout_billing_address_country [value="${country}"]`) !== null;
+        }, contact.country);
+        if (!valid) throw new Error('Unexpected value for country');
+        await this.page.select('#checkout_billing_address_country', contact.country);
 
-        try {
-            await this.page.$eval('#checkout_billing_address_province', (element, state) => {
-                if (element.disabled) return;
-                element.value = element.querySelector(`[data-alternate-values*="${state}"]`).value;
+        valid = await this.page.$eval('#checkout_billing_address_province', (element, state) => {
+                if (element.disabled) return true;
+                const option = element.querySelector(`[data-alternate-values*='"${state}"']`);
+                if (option) element.value = option.value;
+                return option !== null;
             }, contact.state);
-        } catch (error) { throw new Error('Unexpected value for state'); }
+        if (!valid) throw new Error('Unexpected value for state');
 
         await this.page.evaluate((phone) => {
             let element = document.querySelector('#checkout_billing_address_phone');
@@ -345,6 +361,7 @@ class Store extends Site {
     }
 
     async _handlePayment(card) {
+        this.setStatus(Site.status.PAYMENT);
         const fields = {
             'number': card.number,
             'name': card.name,
@@ -427,6 +444,7 @@ class Store extends Site {
     }
 
     async _navigateQueue() {
+        this.setStatus(Site.status.QUEUE);
         await this.page.waitForNavigation({ timeout: 0, waitUntil: "domcontentloaded" });
     }
 
@@ -442,20 +460,6 @@ class Store extends Site {
     }
 
     async _navigateStockProblem() {
-        const items = this.page.$$eval('.stock-problem-table tbody tr', elements => elements.map(element => {
-            return {
-                name: element.querySelector('.product__description__name').textContent,
-                size: element.querySelector('.product__description__variant').textContent,
-                status: element.querySelector('.product__status').textContent.trim()
-            }
-        }));
-
-        if (this.warnings === undefined) this.warnings = [];
-        this.warnings.push({
-            detail: "Some products went out of stock",
-            products: items
-        });
-
         await Promise.all([
             this.click('#continue_button'),
             this.page.waitForNavigation({ timeout: this.timeout, waitUntil: "domcontentloaded" })

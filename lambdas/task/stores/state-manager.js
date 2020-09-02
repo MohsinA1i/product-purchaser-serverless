@@ -8,6 +8,18 @@ class StateManager {
         this.database = new Database(userId);
     }
 
+    static proxy = {
+        BOTH: 0,
+        DIRECT: 1,
+        PROXY: 2
+    }
+
+    static save = {
+        SAVE_SESSION: 0,
+        DISPOSE_SESSION: 1,
+        DISCARD_SESSION: 2
+    }
+
     async load(sessionId) {
         this.data = await this.database.getEntry();
 
@@ -36,14 +48,14 @@ class StateManager {
         await this.database.executeQuery();
     }
 
-    setProxy(hostname, selection) {
-        if (selection == 0) {
+    setProxy(hostname, selection = StateManager.proxy.BOTH) {
+        if (selection == StateManager.proxy.BOTH) {
+            [this._proxyId, this._proxy] = this.findProxy(hostname, this.data.proxy, true);
+        } else if (selection == StateManager.proxy.DIRECT) {
             [this._proxyId, this._proxy] = ['direct', this.data.proxy['direct']];
-        } else if (selection == 1) {
+        } else if (selection == StateManager.proxy.PROXY) {
             [this._proxyId, this._proxy] = this.findProxy(hostname, this.data.proxy, false); 
             if (this._proxy === undefined) throw new Error('No proxy found');
-        } else {
-            [this._proxyId, this._proxy] = this.findProxy(hostname, this.data.proxy, true);
         }
 
         let usage = this._proxy.usage;
@@ -107,22 +119,24 @@ class StateManager {
         this.database.buildQuery('add', 'session', this.sessionId, this.session);
     }
 
-    async save(session) {
+    async save(selection = StateManager.save.DISCARD_SESSION) {
         this.database.createQuery();
 
-        const fingerprintUpdate = { 
-            cookies: this.fingerprint.cookies, 
-            session: session ? this.sessionId : undefined
-        };
-        this.database.buildQuery('update', 'fingerprint', this.fingerprintId, fingerprintUpdate);
+        if (selection === StateManager.save.DISCARD_SESSION || selection === StateManager.save.DISPOSE_SESSION) {
+            this.database.buildQuery('update', 'fingerprint', this.fingerprintId, { session: undefined });
+            if (selection === StateManager.save.DISCARD_SESSION)
+                this.database.buildQuery('update', 'fingerprint', this.fingerprintId, { cookies: this.fingerprint.cookies });
+            else if (selection === StateManager.save.DISPOSE_SESSION && this.session.cookies) {
+                const cookies = [ ...this.fingerprint.cookies, ...this.session.cookies];
+                this.database.buildQuery('update', 'fingerprint', this.fingerprintId, { cookies: cookies });
+            }
+        }
 
-        if (session) {
-            const sessionUpdate = {
-                details: this.session.details,
-                cookies: this.session.cookies
-            };
-            this.database.buildQuery('update', 'session', this.sessionId, sessionUpdate);
-        } else this.database.buildQuery('remove', 'session', this.sessionId);
+        if (selection === StateManager.save.SAVE_SESSION) {
+            const session = { details: this.session.details, cookies: this.session.cookies };
+            this.database.buildQuery('update', 'session', this.sessionId, session);
+        } else
+            this.database.buildQuery('remove', 'session', this.sessionId);
         
         await this.database.executeQuery(this.data.id);
     }

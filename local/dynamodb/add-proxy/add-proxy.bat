@@ -1,2 +1,0 @@
-cd /d %~dp0
-aws dynamodb update-item --table-name UsersTable --key file://key.json --update-expression "SET #1.#2 = :1" --expression-attribute-names  file://expression-attribute-names.json --expression-attribute-values file://expression-attribute-values.json --endpoint-url http://localhost:8000

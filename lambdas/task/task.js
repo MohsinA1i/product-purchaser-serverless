@@ -16,6 +16,7 @@ exports.handler = async (event) => {
 
     const storeFactory = new StoreFactory();
     const store = storeFactory.getStore(request.hostname);
+    store.setStatus = (status) => connection.send('status', { status: status });
     const options = {
         userId: request.id,
         session: request.session,
@@ -24,16 +25,17 @@ exports.handler = async (event) => {
         account: request.account,
         headless: true
     };
-    await store.open(options);
-
-    const taskManager = new TaskManager();
-    connection.onClose(async (code, reason) => { await taskManager.abort(); }); 
-    const error = await taskManager.execute(store, request.tasks, connection);
     
-    await store.close(request.save);
+    connection.onClose(async (code, reason) => {
+        await store.close(request.save);
+    });
 
-    if (error)
-        connection.close(1001, error.message);
-    else 
-        connection.close(1000, '');
+    try {
+        await store.open(options);
+        const taskManager = new TaskManager();
+        await taskManager.execute(store, request.tasks);
+    } catch (error) {
+        if (store.state === 0) connection.close(1000);
+        else connection.close(1001, error.message);
+    }
 };

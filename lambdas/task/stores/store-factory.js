@@ -4,31 +4,21 @@ class StoreFactory {
         AWS: 1
     }
 
-    static proxy = {
-        DIRECT: 0,
-        RANDOM: 1,
-        BOTH: 2
-    }
-
-    static save = {
-        SESSION: 0,
-        DISPOSE_SESSION: 1,
-        DISCARD_SESSION: 2
-    }
-
     getStore(url, options = {}) {
-        const hostname = url.match(/(?:https?:\/\/)?([^\/]+)/)[1];
+        let hostname = url.match(/(?:https?:\/\/)?([^\/]+)/)[1];
+        const domain = hostname.match(/(?:www\.)?([^\/.]+)/)[1];
+        const supported = this.supportedStore(domain);
+        if (supported) hostname = this.supportedHostname(domain);
+        
         if (options.environment === StoreFactory.environment.AWS) {
-            const Store = require('./aws/aws-store.js');
+            const Store = require('./aws/aws-store');
             return new Store(hostname);
         } else {
-            const domain = hostname.match(/(?:www\.)?([^\/.]+)/)[1];
-            const supported = this.supportedStore(domain);
             if (supported) {
-                const Store = require(`./local/profiles/${domain}.js`);
-                return new Store();
+                const Store = require(`./local/profiles/${domain}`);
+                return new Store(hostname);
             } else {
-                const Store = require(`./local/profiles/generic.js`);
+                const Store = require(`./local/profiles/generic`);
                 return new Store(hostname);
             }
         }
@@ -45,6 +35,23 @@ class StoreFactory {
             return true;
         }
         return false;
+    }
+
+    supportedHostname(domain) {
+        if (domain === 'cncpts')
+            return 'cncpts.com'
+        else if (domain === 'deadstock')
+            return 'www.deadstock.ca'
+        else if (domain === 'hanon-shop')
+            return 'www.hanon-shop.com'
+        else if (domain === 'kith')
+            return 'kith.com'
+        else if (domain === 'notre-shop')
+            return 'www.notre-shop.com'
+        else if (domain === 'shopnicekicks')
+            return 'shopnicekicks.com'
+        else if (domain === 'undefeated')
+            return 'undefeated.com'
     }
 }
 

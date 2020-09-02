@@ -1,8 +1,8 @@
-const Store = require('../store.js')
+const Store = require('../store')
 
 class Kith extends Store {
-    constructor() {
-        super("kith.com");
+    constructor(hostname) {
+        super(hostname);
     }
 
     params () {
@@ -66,23 +66,21 @@ class Kith extends Store {
     async productRequest(handle, referrer) {
         if (await this.where() === undefined) await this.goto('home');
 
-        try {
-            return await this.page.evaluate(async (params, url, referrer) => {
-                params.headers["content-type"] = "application/json";
-                params.referrer = referrer;
-                params.body = null;
-                params.method = "GET";
-    
-                const response = await fetch(url, params);
-                return await response.json();
-            }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
-        } catch (error) { throw new Error(`No product '${handle}'`); } 
+        return await this.page.evaluate(async (params, url, referrer) => {
+            params.headers["content-type"] = "application/json";
+            params.referrer = referrer;
+            params.body = null;
+            params.method = "GET";
+
+            const response = await fetch(url, params);
+            return await response.json();
+        }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
     }
 
     async addRequest(id, quantity, referrer) {
         if (await this.where() === undefined) await this.goto('home');
 
-        const response = await this.page.evaluate(async (params, url, body, referrer) => {
+        return await this.page.evaluate(async (params, url, body, referrer) => {
             params.headers["content-type"] = "application/x-www-form-urlencoded; charset=UTF-8";
             params.referrer = referrer;
             params.body = body;
@@ -91,8 +89,6 @@ class Kith extends Store {
             const response = await fetch(url, params);
             return await response.json();
         }, this.params(), `https://${this.hostname}/cart/add.js`, `id=${id}&quantity=${quantity}`, `https://${this.hostname}${referrer}`);
-        if (response.status) throw new Error(response.description);
-        return response;
     }
 }
 

@@ -6,22 +6,40 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const RecaptchaPlugin = require('puppeteer-extra-plugin-recaptcha');
 Puppeteer.use(StealthPlugin());
 
-const StateManager = require('./state-manager.js'); 
+const StateManager = require('../state-manager');
 
 class Site {
     constructor(hostname) {
         this.hostname = hostname;
-        this.timeout = 10000;
+        this.state = Site.state.CLOSED;
+        this.timeout = 15000;
+    }
+
+    static status = {
+        CAPTCHA: 4,
+        KEYWORDS: 5,
+        STOCK: 6,
+        LOGIN: 7,
+        QUEUE: 8,
+        COUPON: 9,
+        CONTACT: 10,
+        SHIPPING: 11,
+        PAYMENT: 12,
+    }
+
+    static state = {
+        CLOSED: 0,
+        OPEN: 1
     }
 
     async open(options) {
         this.options = options;
 
-        this.state = new StateManager(this.options.userId);
+        this.stateManager = new StateManager(this.options.userId);
         if (this.options.session) 
-            await this.state.load(this.options.session);
+            await this.stateManager.load(this.options.session);
         else
-            await this.state.create(this.hostname, this.options.proxy);
+            await this.stateManager.create(this.hostname, this.options.proxy);
 
         if (this.options.captcha)
             Puppeteer.use(RecaptchaPlugin({ provider: { id: '2captcha', token: this.options.captcha } }));
@@ -31,8 +49,8 @@ class Site {
             '--disable-web-security',
             '--disable-features=IsolateOrigins,site-per-process'
         ];
-        if (this.state.proxy) 
-            args.push(`--proxy-server=http://${this.state.proxy.address}:${this.state.proxy.port}`);
+        if (this.stateManager.proxy) 
+            args.push(`--proxy-server=http://${this.stateManager.proxy.address}:${this.stateManager.proxy.port}`);
         
         if (this.options.headless === undefined) this.options.headless = true;
         this.browser = await Puppeteer.launch({
@@ -40,21 +58,21 @@ class Site {
             headless: this.options.headless, 
             slowMo: 10, 
             args: args,
-            defaultViewport: this.state.fingerprint.viewport
+            defaultViewport: this.stateManager.fingerprint.viewport
         });
         
         this.page = await this.browser.newPage();
 
-        if (this.state.proxy && this.state.proxy.username) 
-            await this.page.authenticate({ username: this.state.proxy.username, password: this.state.proxy.password });
+        if (this.stateManager.proxy && this.stateManager.proxy.username) 
+            await this.page.authenticate({ username: this.stateManager.proxy.username, password: this.stateManager.proxy.password });
         
-        await this.page.setUserAgent(this.state.fingerprint.useragent);
+        await this.page.setUserAgent(this.stateManager.fingerprint.useragent);
 
         let cookies = [];
-        if (this.state.fingerprint.cookies)
-            cookies = [ ...cookies, ...this.state.fingerprint.cookies ];
-        if (this.state.session.cookies)
-            cookies = [ ...cookies, ...this.state.session.cookies ];
+        if (this.stateManager.fingerprint.cookies)
+            cookies = [ ...cookies, ...this.stateManager.fingerprint.cookies ];
+        if (this.stateManager.session.cookies)
+            cookies = [ ...cookies, ...this.stateManager.session.cookies ];
         await this.page.setCookie(...cookies);
 
         await this.page.setRequestInterception(true);
@@ -65,7 +83,7 @@ class Site {
             const method = req.method();
 
             if (method === 'POST' && type === 'document' && url.startsWith(`https://${this.hostname}`)) {
-                const path = url.match(/(?:https?:\/\/)?(?:[^\/]+)([^?]+)/)[1];
+                const path = url.match(/(?:https?:\/\/)?(?:[^\/]*)([^?]+)/)[1];
                 if (path === '/account/login') {
                     let postData = req.postData();
                     postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
@@ -92,7 +110,7 @@ class Site {
                 return;
             }
 
-            if (this.options.captcha === undefined) {
+            if (!this.options.captcha) {
                 if (type === 'image') {
                     if (url.startsWith('https://www.google.com/recaptcha') ||
                         url.startsWith('https://assets.hcaptcha.com/captcha') ||
@@ -111,31 +129,30 @@ class Site {
             
             req.abort();
         });
+
+        if (this.delayedClose) await this.delayedClose();
+        else this.state = Site.state.OPEN;
     }
 
     async close(save) {
-        const services = [
-            'https://google.com',
-            'https://assets.hcaptcha.com',
-            'https://shopify.com'
-        ];
-        if (save === 0) {
-            this.state.session.cookies = await this.page.cookies(`https://${this.hostname}`);
-            this.state.fingerprint.cookies = await this.page.cookies(...services);
-        } else if (save === 1) {
-            this.dispose();
-            this.state.fingerprint.cookies = await this.page.cookies(`https://${this.hostname}`, ...services);
-        } else {
-            this.state.fingerprint.cookies = await this.page.cookies(...services);
-        }  
+        if (this.state === Site.state.CLOSED)
+            this.delayedClose = async () => { await this._close(save); }
+        else {
+            this.state = Site.state.CLOSED
+            return await this._close(save);
+        }
+    }
 
-        await this.page.close();
+    async _close(save) {
+        if (save === StateManager.save.DISPOSE_SESSION) this.dispose();
+        this.stateManager.session.cookies = await this.page.cookies(`https://${this.hostname}`);
+        const services = ['https://google.com', 'https://assets.hcaptcha.com', 'https://shopify.com'];
+        this.stateManager.fingerprint.cookies = await this.page.cookies(...services);
+        await this.stateManager.save(save);
+
         await this.browser.close();
 
-        if (save === 0) {
-            await this.state.save(true);
-            return this.state.sessionId;
-        } else await this.state.save(false);
+        return this.stateManager.sessionId;
     }
 
     async goto(path) {
@@ -147,35 +164,30 @@ class Site {
     }
 
     async where() {
-        try {
-            const url = this.page.url();
-            if (url === 'about:blank') {
-                return;
+        const url = this.page.url();
+        if (url === 'about:blank') {
+            return;
+        } else {
+            const heading = await this.page.evaluate(() => {
+                const heading = document.querySelector('.cf-subheadline');
+                if (heading) return heading.textContent;
+            });
+            if (heading) {
+                if (heading.startsWith('Please')) return 'cloudflare';
+                else if (heading.endsWith('limited')) return 'limited';
             } else {
-                const heading = await this.page.evaluate(() => {
-                    const heading = document.querySelector('.cf-subheadline');
-                    if (heading) return heading.textContent;
-                });
-                if (heading) {
-                    if (heading.startsWith('Please')) return 'cloudflare';
-                    else if (heading.endsWith('limited')) return 'limited';
+                const path = url.match(/(?:https?:\/\/)?(?:[^\/]*)([^?]+)/)[1];
+                if (path === '/') { 
+                    return 'home'
                 } else {
-                    const path = url.match(/(?:https?:\/\/)?(?:[^\/]+)([^?]+)/)[1];
-                    if (path === '/') { 
-                        return 'home'
+                    const segments = path.match(/(?<=\/)([^\/?])+/g);
+                    if (segments.includes('checkouts')) {
+                        return await this.page.evaluate(() => meta.page.path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[0]);
                     } else {
-                        const segments = path.match(/(?<=\/)([^\/?])+/g);
-                        if (segments.includes('checkouts')) {
-                            return await this.page.evaluate(() => meta.page.path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[0]);
-                        } else {
-                            return path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
-                        }
+                        return path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
                     }
                 }
             }
-        } catch (error) {
-            await this.reload();
-            return await this.where();
         }
     }
 
@@ -199,19 +211,17 @@ class Site {
         });
         if (reCaptcha === undefined) return;
 
+        this.setStatus(Site.status.CAPTCHA);
         await this.page.waitForSelector('[name="g-recaptcha-response"]');
 
         if (this.options.captcha) {
-            let findError, solutionError, solveError, otherError;
-            try {
-                let response = await this.page.findRecaptchas();
-                findError = response.error;
-                response = await this.page.getRecaptchaSolutions(response.captchas);
-                solutionError = response.error;
-                response = await this.page.enterRecaptchaSolutions(response.solutions);
-                solveError = response.error;
-            } catch (error) { otherError = error; }
-            if (findError || solutionError || solveError || otherError) {
+            let response = await this.page.findRecaptchas();
+            const findError = response.error;
+            response = await this.page.getRecaptchaSolutions(response.captchas);
+            const solutionError = response.error;
+            response = await this.page.enterRecaptchaSolutions(response.solutions);
+            const solveError = response.error;
+            if (findError || solutionError || solveError) {
                 await this.reload();
                 await this.waitForReCaptcha();
             }
@@ -249,6 +259,8 @@ class Site {
             }
         } else throw new Error('Encountered captcha');
     }
+
+    setStatus(status) {}
 }
 
 module.exports = Site;
