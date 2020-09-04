@@ -5,7 +5,7 @@ class Generic extends Store {
         super(hostname);
     }
 
-    params () {
+    params() {
         return {
             "headers": {
                 "accept": "application/json, text/plain, */*",
@@ -14,10 +14,10 @@ class Generic extends Store {
                 "sec-fetch-mode": "cors",
                 "sec-fetch-site": "same-origin",
                 "x-requested-with": "XMLHttpRequest"
-              },
-              "referrerPolicy": "no-referrer-when-downgrade",
-              "mode": "cors",
-              "credentials": "include"
+            },
+            "referrerPolicy": "no-referrer-when-downgrade",
+            "mode": "cors",
+            "credentials": "include"
         }
     }
 
@@ -30,7 +30,9 @@ class Generic extends Store {
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart.js`, `https://${this.hostname}/`);
     }
 
@@ -43,7 +45,9 @@ class Generic extends Store {
             params.method = "POST";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart/clear.js`, `https://${this.hostname}/cart`);
     }
 
@@ -56,20 +60,24 @@ class Generic extends Store {
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/search/suggest.json?q=${keywords.join('%20')}&resources[type]=product`, `https://${this.hostname}/`);
     }
-    
+
     async productRequest(handle, referrer) {
         if (await this.where() === undefined) await this.goto('home');
-        
+
         return await this.page.evaluate(async (params, url, referrer) => {
             params.referrer = referrer;
             params.body = null;
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
     }
 
@@ -83,7 +91,9 @@ class Generic extends Store {
             params.method = "POST";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart/add.js`, `{ "id": "${id}", "quantity": "${quantity}" }`, `https://${this.hostname}${referrer}`);
     }
 }

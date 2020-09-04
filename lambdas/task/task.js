@@ -14,12 +14,13 @@ exports.handler = async (event) => {
 
     const request = event.body;
 
-    const storeFactory = new StoreFactory();
+    const storeFactory = new StoreFactory(StoreFactory.type.BOT);
     const store = storeFactory.getStore(request.hostname);
     store.setStatus = (status) => connection.send('status', { status: status });
     const options = {
         userId: request.id,
         session: request.session,
+        delay: request.delay,
         proxy: request.proxy,
         captcha: request.captcha,
         account: request.account,

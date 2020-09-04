@@ -1,7 +1,8 @@
 class StoreFactory {
-    static environment = {
-        LOCAL: 0,
-        AWS: 1
+    static type = {
+        MANUAL: 0,
+        BOT: 1,
+        BOT_CLOUD: 2
     }
 
     getStore(url, options = {}) {
@@ -10,10 +11,10 @@ class StoreFactory {
         const supported = this.supportedStore(domain);
         if (supported) hostname = this.supportedHostname(domain);
         
-        if (options.environment === StoreFactory.environment.AWS) {
-            const Store = require('./aws/aws-store');
+        if (options.type === StoreFactory.type.MANUAL) { 
+            const Store = require('./local/site');
             return new Store(hostname);
-        } else {
+        } else if (options.type === StoreFactory.type.BOT) {
             if (supported) {
                 const Store = require(`./local/profiles/${domain}`);
                 return new Store(hostname);
@@ -21,6 +22,9 @@ class StoreFactory {
                 const Store = require(`./local/profiles/generic`);
                 return new Store(hostname);
             }
+        } else if (options.type === StoreFactory.type.BOT_CLOUD) {
+            const Store = require('./aws/aws-store');
+            return new Store(hostname);
         }
     }
 

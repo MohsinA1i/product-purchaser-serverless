@@ -16,6 +16,7 @@ class Site {
     }
 
     static status = {
+        SUCCESS: 1,
         CAPTCHA: 4,
         KEYWORDS: 5,
         STOCK: 6,
@@ -25,6 +26,8 @@ class Site {
         CONTACT: 10,
         SHIPPING: 11,
         PAYMENT: 12,
+        WAITING: 13,
+        NAVIGATED: 14
     }
 
     static state = {
@@ -144,10 +147,12 @@ class Site {
     }
 
     async _close(save) {
-        if (save === StateManager.save.DISPOSE_SESSION) this.dispose();
-        this.stateManager.session.cookies = await this.page.cookies(`https://${this.hostname}`);
-        const services = ['https://google.com', 'https://assets.hcaptcha.com', 'https://shopify.com'];
-        this.stateManager.fingerprint.cookies = await this.page.cookies(...services);
+        if (this.page && !this.page.isClosed()) {
+            if (save === StateManager.save.DISPOSE_SESSION && this.dispose) this.dispose();
+            this.stateManager.session.cookies = await this.page.cookies(`https://${this.hostname}`);
+            const services = ['https://google.com', 'https://assets.hcaptcha.com', 'https://shopify.com'];
+            this.stateManager.fingerprint.cookies = await this.page.cookies(...services);
+        }
         await this.stateManager.save(save);
 
         await this.browser.close();
@@ -155,8 +160,21 @@ class Site {
         return this.stateManager.sessionId;
     }
 
+    async waitForClose() {
+        await new Promise(resolve => {
+            this.page.on('close', () => { resolve() });
+            this.browser.on('disconnected', () => { resolve() });
+        });
+    }
+
     async goto(path) {
         await this.page.goto(`https://${this.hostname}${path}`, { timeout: this.timeout, waitUntil: "domcontentloaded" });
+    }
+
+    async waitForNavigation() {
+        this.setStatus(Site.status.WAITING);
+        await this.page.waitForNavigation({ timeout: 0, waitUntil: "domcontentloaded" });
+        this.setStatus(Site.status.NAVIGATED);
     }
 
     async reload() {
@@ -182,7 +200,7 @@ class Site {
                 } else {
                     const segments = path.match(/(?<=\/)([^\/?])+/g);
                     if (segments.includes('checkouts')) {
-                        return await this.page.evaluate(() => meta.page.path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[0]);
+                        return await this.page.evaluate(() => meta.page.path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1]);
                     } else {
                         return path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
                     }

@@ -85,8 +85,10 @@ class Store extends Site {
         while (true) {
             const products = (await this.findRequest(keywords)).resources.results.products;
             if (products.length == 0) {
-                if (retry) continue;
-                else throw new Error('No product matching keywords');
+                if (retry) {
+                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    continue;
+                } else throw new Error('No product matching keywords');
             }
             const product = products[0];
             return {
@@ -116,8 +118,10 @@ class Store extends Site {
                 variant = product.variants.find((variant) => variant.available);
             }
             if (variant === undefined) {
-                if (retry) continue;
-                else if (size) throw new Error(`Product ${product.title} is not available in size ${size}`);
+                if (retry) {
+                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    continue;
+                } else if (size) throw new Error(`Product ${product.title} is not available in size ${size}`);
                 else throw new Error(`Product ${product.title} is not available`);
             }
 
@@ -181,6 +185,7 @@ class Store extends Site {
             throw new Error(await this._handleFailure());
         } else if (here === 'thank_you') {
             this.stateManager.session.details.payment = 0;
+            this.setStatus(Site.status.SUCCESS);
         }
     }
 

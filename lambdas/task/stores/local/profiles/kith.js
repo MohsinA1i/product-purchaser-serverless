@@ -31,7 +31,9 @@ class Kith extends Store {
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart.js`, `https://${this.hostname}/`);
     }
 
@@ -45,7 +47,9 @@ class Kith extends Store {
             params.method = "POST";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart/clear.js`, `https://${this.hostname}/cart`);
     }
 
@@ -59,7 +63,9 @@ class Kith extends Store {
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/search/suggest.json?q=${keywords.join('%20')}&resources[type]=product`, `https://${this.hostname}/`);
     }
 
@@ -73,7 +79,9 @@ class Kith extends Store {
             params.method = "GET";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/products/${handle}.js`, `https://${this.hostname}${referrer}`);
     }
 
@@ -87,7 +95,9 @@ class Kith extends Store {
             params.method = "POST";
 
             const response = await fetch(url, params);
-            return await response.json();
+            try { 
+                return await response.json();
+            } catch (error) { throw new Error(response.status); };
         }, this.params(), `https://${this.hostname}/cart/add.js`, `id=${id}&quantity=${quantity}`, `https://${this.hostname}${referrer}`);
     }
 }
