@@ -177,19 +177,7 @@ class Store extends Site {
         await this._handleBilling(contact);
         await this._handlePayment(card);
 
-        let here = await this.where();
-        if (here === 'processing') {
-            await this._navigateProcessing();
-            here = await this.where();
-        }
-
-        if (here === 'payment_method') {
-            this.stateManager.session.details.payment = 1;
-            throw new Error(await this._handleFailure());
-        } else if (here === 'thank_you') {
-            this.stateManager.session.details.payment = 0;
-            this.setStatus(Site.status.SUCCESS);
-        }
+        await this._navigatePayment();
     }
 
     async dispose() {
@@ -480,8 +468,18 @@ class Store extends Site {
         ]);
     }
 
-    async _navigateProcessing() {
-        await this.page.waitForNavigation({ timeout: 0, waitUntil: "domcontentloaded" });
+    async _navigatePayment() {
+        const here = await this.where();
+        if (here === 'payment_method') {
+            this.stateManager.session.details.payment = 1;
+            throw new Error(await this._handleFailure());
+        } else if (here === 'thank_you') {
+            this.stateManager.session.details.payment = 0;
+            this.setStatus(Site.status.SUCCESS);
+        } else {
+            await this.page.waitForNavigation({ timeout: 0, waitUntil: "domcontentloaded" });
+            await this._navigatePayment();
+        }
     }
 }
 
