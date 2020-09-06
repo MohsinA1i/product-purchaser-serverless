@@ -72,10 +72,11 @@ class StateManager {
         let leastUsedProxyId;
         let leastUsedProxy;
         for (const proxyId in proxies) {
-            if (proxyId === 'direct' && !direct) 
-                continue;
-
             const proxy = proxies[proxyId];
+            if (proxy.status === 0) continue;
+
+            if (proxyId === 'direct' && !direct) continue;
+
             if (proxy.usage[hostname] === undefined) {
                 return [proxyId, proxy];
             } else if (leastUsedProxy === undefined || proxy.usage[hostname] < leastUsedProxy.usage[hostname]) {

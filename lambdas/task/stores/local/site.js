@@ -37,7 +37,8 @@ class Site {
     }
 
     async open(options) {
-        if (options.retryDelay === undefined) options.retryDelay = 1000;
+        if (options.requestDelay === undefined || options.requestDelay < 1000) options.requestDelay = 1000;
+        if (options.intercept === undefined) options.intercept = true;
         this.options = options;
 
         this.stateManager = new StateManager(this.options.userId);
@@ -79,61 +80,63 @@ class Site {
         if (this.stateManager.session.cookies)
             cookies = [ ...cookies, ...this.stateManager.session.cookies ];
         await this.page.setCookie(...cookies);
+        
+        if (this.options.intercept) {
+            await this.page.setRequestInterception(true);
+            this.override = {};
+            this.page.on('request', (req) => {
+                const url = req.url();
+                const type = req.resourceType();
+                const method = req.method();
 
-        await this.page.setRequestInterception(true);
-        this.override = {};
-        this.page.on('request', (req) => {
-            const url = req.url();
-            const type = req.resourceType();
-            const method = req.method();
-
-            if (method === 'POST' && type === 'document' && url.startsWith(`https://${this.hostname}`)) {
-                const path = Regex.getPath(url);
-                if (path === '/account/login') {
-                    let postData = req.postData();
-                    postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
-                    postData = postData.replace('password%5D=&', `password%5D=${UrlEncode(this.override.password)}&`);
-                    req.continue({ postData: postData });
-                    return;
-                } else if (path !== '/') {
-                    const segments = Regex.getSegments(path);
-                    if (segments.includes('checkouts')) {
+                if (method === 'POST' && type === 'document' && url.startsWith(`https://${this.hostname}`)) {
+                    const path = Regex.getPath(url);
+                    if (path === '/account/login') {
                         let postData = req.postData();
-                        const step = postData.match(/(?:_step=)([^&]+)/);
-                        if (step && step[1] === 'contact_information') {
-                            postData = postData.replace('email_or_phone%5D=&', `email_or_phone%5D=${UrlEncode(this.override.email)}&`);
-                            postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
-                            req.continue({ postData: postData });
-                            return;
+                        postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
+                        postData = postData.replace('password%5D=&', `password%5D=${UrlEncode(this.override.password)}&`);
+                        req.continue({ postData: postData });
+                        return;
+                    } else if (path !== '/') {
+                        const segments = Regex.getSegments(path);
+                        if (segments.includes('checkouts')) {
+                            let postData = req.postData();
+                            const step = postData.match(/(?:_step=)([^&]+)/);
+                            if (step && step[1] === 'contact_information') {
+                                postData = postData.replace('email_or_phone%5D=&', `email_or_phone%5D=${UrlEncode(this.override.email)}&`);
+                                postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
+                                req.continue({ postData: postData });
+                                return;
+                            }
                         }
                     }
                 }
-            }
 
-            if (type === 'document' || type === 'script' || type === 'xhr' || type === 'fetch' || type === 'stylesheet' && !this.options.headless) {
-                req.continue();
-                return;
-            }
+                if (type === 'document' || type === 'script' || type === 'xhr' || type === 'fetch' || type === 'stylesheet' && !this.options.headless) {
+                    req.continue();
+                    return;
+                }
 
-            if (!this.options.captcha) {
-                if (type === 'image') {
-                    if (url.startsWith('https://www.google.com/recaptcha') ||
-                        url.startsWith('https://assets.hcaptcha.com/captcha') ||
-                        url.startsWith('https://imgs.hcaptcha.com')) {
+                if (!this.options.captcha) {
+                    if (type === 'image') {
+                        if (url.startsWith('https://www.google.com/recaptcha') ||
+                            url.startsWith('https://assets.hcaptcha.com/captcha') ||
+                            url.startsWith('https://imgs.hcaptcha.com')) {
+                                req.continue();
+                                return;
+                            }
+                    } else if (type === 'stylesheet') {
+                        if (url.startsWith('https://www.gstatic.com/recaptcha') ||
+                        url.startsWith('https://assets.hcaptcha.com/captcha')) {
                             req.continue();
                             return;
                         }
-                } else if (type === 'stylesheet') {
-                    if (url.startsWith('https://www.gstatic.com/recaptcha') ||
-                    url.startsWith('https://assets.hcaptcha.com/captcha')) {
-                        req.continue();
-                        return;
                     }
                 }
-            }
-            
-            req.abort();
-        });
+                
+                req.abort();
+            });
+        }
 
         if (this.delayedClose) await this.delayedClose();
         else this.state = Site.state.OPEN;

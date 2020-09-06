@@ -20,7 +20,7 @@ exports.handler = async (event) => {
     const options = {
         userId: request.id,
         session: request.session,
-        delay: request.delay,
+        requestDelay: request.requestDelay,
         proxy: request.proxy,
         captcha: request.captcha,
         account: request.account,

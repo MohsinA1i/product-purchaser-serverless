@@ -87,7 +87,7 @@ class Store extends Site {
             const products = (await this.findRequest(keywords)).resources.results.products;
             if (products.length == 0) {
                 if (retry) {
-                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    await new Promise(resolve => setTimeout(resolve(), this.options.requestDelay));
                     continue;
                 } else throw new Error('No product matching keywords');
             }
@@ -120,7 +120,7 @@ class Store extends Site {
             }
             if (variant === undefined) {
                 if (retry) {
-                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    await new Promise(resolve => setTimeout(resolve(), this.options.requestDelay));
                     continue;
                 } else if (size) throw new Error(`Product ${product.title} is not available in size ${size}`);
                 else throw new Error(`Product ${product.title} is not available`);
@@ -129,7 +129,7 @@ class Store extends Site {
             let response = await this.addRequest(variant.id, quantity, path);
             if (response.status) {
                 if (retry) {
-                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    await new Promise(resolve => setTimeout(resolve(), this.options.requestDelay));
                     continue;
                 } else throw new Error(response.description);
             } else product = response;
@@ -238,7 +238,7 @@ class Store extends Site {
 
         await this.page.evaluate((company) => {
             let element = document.querySelector('#checkout_shipping_address_company');
-            if (element) element.value = company;
+            if (element && element.hasAttribute('aria-required')) element.value = company;
         }, contact.company);
 
         let valid = await this.page.evaluate((country) => {
@@ -342,7 +342,7 @@ class Store extends Site {
 
         await this.page.evaluate((company) => {
             let element = document.querySelector('#checkout_billing_address_company');
-            if (element) element.value = company;
+            if (element && element.hasAttribute('aria-required')) element.value = company;
         }, contact.company);
 
         let valid = await this.page.evaluate((country) => {
