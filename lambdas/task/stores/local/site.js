@@ -6,6 +6,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const RecaptchaPlugin = require('puppeteer-extra-plugin-recaptcha');
 Puppeteer.use(StealthPlugin());
 
+const Regex = require('../regex');
 const StateManager = require('../state-manager');
 
 class Site {
@@ -36,6 +37,7 @@ class Site {
     }
 
     async open(options) {
+        if (options.retryDelay === undefined) options.retryDelay = 1000;
         this.options = options;
 
         this.stateManager = new StateManager(this.options.userId);
@@ -86,7 +88,7 @@ class Site {
             const method = req.method();
 
             if (method === 'POST' && type === 'document' && url.startsWith(`https://${this.hostname}`)) {
-                const path = url.match(/(?:https?:\/\/)?(?:[^\/]*)([^?]+)/)[1];
+                const path = Regex.getPath(url);
                 if (path === '/account/login') {
                     let postData = req.postData();
                     postData = postData.replace('email%5D=&', `email%5D=${UrlEncode(this.override.email)}&`);
@@ -94,7 +96,7 @@ class Site {
                     req.continue({ postData: postData });
                     return;
                 } else if (path !== '/') {
-                    const segments = path.match(/(?<=\/)([^\/?])+/g);
+                    const segments = Regex.getSegments(path);
                     if (segments.includes('checkouts')) {
                         let postData = req.postData();
                         const step = postData.match(/(?:_step=)([^&]+)/);
@@ -186,25 +188,32 @@ class Site {
         if (url === 'about:blank') {
             return;
         } else {
-            const heading = await this.page.evaluate(() => {
-                const heading = document.querySelector('.cf-subheadline');
-                if (heading) return heading.textContent;
-            });
-            if (heading) {
-                if (heading.startsWith('Please')) return 'cloudflare';
-                else if (heading.endsWith('limited')) return 'limited';
-            } else {
-                const path = url.match(/(?:https?:\/\/)?(?:[^\/]*)([^?]+)/)[1];
-                if (path === '/') { 
-                    return 'home'
+            try {
+                const heading = await this.page.evaluate(() => {
+                    const heading = document.querySelector('.cf-subheadline');
+                    if (heading) return heading.textContent;
+                });
+                if (heading) {
+                    if (heading.startsWith('Please')) return 'cloudflare';
+                    else if (heading.endsWith('limited')) return 'limited';
                 } else {
-                    const segments = path.match(/(?<=\/)([^\/?])+/g);
-                    if (segments.includes('checkouts')) {
-                        return await this.page.evaluate(() => meta.page.path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1]);
+                    const path = Regex.getPath(url);
+                    if (path === '/') { 
+                        return 'home'
                     } else {
-                        return path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
+                        const segments = Regex.getSegments(path);
+                        if (segments.includes('checkouts')) {
+                            return await this.page.evaluate(() => Shopify.Checkout.step);
+                        } else {
+                            return Regex.getEndpoint(path);
+                        }
                     }
                 }
+            } catch (error) {
+                if (error.message.startsWith('Execution context was destroyed')) {
+                    await this.page.waitForNavigation({ timeout: 0, waitUntil: "domcontentloaded" });
+                    return await this.where();
+                } else throw error;
             }
         }
     }

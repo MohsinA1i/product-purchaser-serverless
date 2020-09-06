@@ -14,8 +14,8 @@ exports.handler = async (event) => {
 
     const request = event.body;
 
-    const storeFactory = new StoreFactory(StoreFactory.type.BOT);
-    const store = storeFactory.getStore(request.hostname);
+    const storeFactory = new StoreFactory();
+    const store = storeFactory.getStore(request.hostname, { type: StoreFactory.type.BOT });
     store.setStatus = (status) => connection.send('status', { status: status });
     const options = {
         userId: request.id,

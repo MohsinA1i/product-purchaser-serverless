@@ -1,3 +1,4 @@
+const Regex = require('../regex');
 const Site = require('./site');
 
 class Store extends Site {
@@ -60,7 +61,7 @@ class Store extends Site {
                 size: item.variant_title,
                 price: item.price,
                 quantity: item.quantity,
-                path: item.url.match(/[^?]+/)[0],
+                path: Regex.removeQuery(item.url),
                 image: item.image
             };
         });
@@ -95,7 +96,7 @@ class Store extends Site {
                 id: product.id,
                 name: product.title,
                 price: product.price,
-                path: product.url.match(/[^?]+/)[0],
+                path: Regex.removeQuery(product.url),
                 image: product.image
             }
         }
@@ -103,8 +104,8 @@ class Store extends Site {
 
     async addToCart(path, size, quantity = 1, retry = true) {
         this.setStatus(Site.status.STOCK);
-        path = path.match(/(?:https?:\/\/)?(?:[^\/]*)([^\s]*)/)[1];
-        const handle = path.match(/([^\/\?]*)(?:\?[^?]*)?$/)[1];
+        path = Regex.getPathAndQuery(path);
+        const handle = Regex.getEndpoint(path);
         while (true) {
             let product = await this.productRequest(handle, path);
 
@@ -127,8 +128,10 @@ class Store extends Site {
 
             let response = await this.addRequest(variant.id, quantity, path);
             if (response.status) {
-                if (retry) continue;
-                else throw new Error(response.description);
+                if (retry) {
+                    await new Promise(resolve => setTimeout(resolve(), this.options.retryDelay));
+                    continue;
+                } else throw new Error(response.description);
             } else product = response;
 
             const item = {
@@ -137,7 +140,7 @@ class Store extends Site {
                 size: product.variant_title,
                 price: product.price,
                 quantity: product.quantity,
-                path: product.url.match(/[^?]+/)[0],
+                path: Regex.removeQuery(product.url),
                 image: product.image
             }
             if (this.stateManager.session.details.cart === undefined) this.stateManager.session.details.cart = {};
@@ -154,20 +157,20 @@ class Store extends Site {
 
     async setCoupon(coupon) {
         const here = await this.where();
-        if (here !== 'contact_information' && here !== 'shipping' && here !== 'payment')
+        if (here !== 'contact_information' && here !== 'shipping_method' && here !== 'payment_method')
             await this.goto('contact_information');
         return await this._handleCoupon(coupon);
     }
 
     async setShipping() {
-        await this.goto('shipping');
+        await this.goto('shipping_method');
         await this._checkContact();
         await this._handleShipping();
         this.stateManager.session.details.shipping = 0;
     }
 
     async submitPayment(card, contact) {
-        await this.goto('payment');
+        await this.goto('payment_method');
         await this.page.waitForSelector('.review-block', { timeout: 0 });
         await this._checkContact();   
         await this._checkShipping();
@@ -180,7 +183,7 @@ class Store extends Site {
             here = await this.where();
         }
 
-        if (here === 'payment') {
+        if (here === 'payment_method') {
             this.stateManager.session.details.payment = 1;
             throw new Error(await this._handleFailure());
         } else if (here === 'thank_you') {
@@ -269,6 +272,8 @@ class Store extends Site {
             this.click('#continue_button'),
             this.page.waitForNavigation({ timeout: this.timeout, waitUntil: "domcontentloaded" })
         ]);
+
+        this.contact = contact;
     }
 
     async _handleShipping() {
@@ -400,6 +405,10 @@ class Store extends Site {
         const here = await this.where();
         if (here === to || (to === 'account' && here === 'login')) {
             return here;
+        } else if (here === 'contact_information' && this.contact) {
+            await this._handleContact(this.contact);
+        } else if (here === 'shipping_method') {
+            await this._handleShipping();
         } else if (here === 'cloudflare') {
             await this.navigateCloudflare();
         } else if (here === 'limited') {
@@ -429,9 +438,9 @@ class Store extends Site {
             await super.goto(`/account`);
         } else if (to === 'contact_information') {
             await super.goto(`/checkout?step=contact_information`);
-        } else if (to === 'shipping') {
+        } else if (to === 'shipping_method') {
             await super.goto(`/checkout?step=shipping_method`);
-        } else if (to === 'payment') {
+        } else if (to === 'payment_method') {
             await super.goto(`/checkout?step=payment_method`);
         }
     }
