@@ -67,7 +67,7 @@ class Site {
             defaultViewport: this.stateManager.fingerprint.viewport
         });
         
-        this.page = await this.browser.newPage();
+        this.page = (await this.browser.pages())[0];
 
         if (this.stateManager.proxy && this.stateManager.proxy.username) 
             await this.page.authenticate({ username: this.stateManager.proxy.username, password: this.stateManager.proxy.password });
@@ -233,26 +233,18 @@ class Site {
     }
 
     async waitForReCaptcha(bound = false) {
-        const reCaptcha = await this.page.evaluate(() => {
-            const selectors = ['.g-recaptcha'];
-            for (const selector of selectors) {
-                if (document.querySelector(selector) !== null) return selector;
-            }
-        });
-        if (reCaptcha === undefined) return;
+        const missing = await this.page.evaluate(() => document.querySelector('.g-recaptcha') === null);
+        if (missing) return;
 
         this.setStatus(Site.status.CAPTCHA);
         await this.page.waitForSelector('[name="g-recaptcha-response"]');
 
         if (this.options.captcha) {
-            let response = await this.page.findRecaptchas();
-            const findError = response.error;
-            response = await this.page.getRecaptchaSolutions(response.captchas);
-            const solutionError = response.error;
-            response = await this.page.enterRecaptchaSolutions(response.solutions);
-            const solveError = response.error;
+            let { captchas, findError } = await this.page.findRecaptchas();
+            captchas = captchas.filter((captcha) => captcha.display.size === 'normal')
+            const { solutions, solutionError } = await this.page.getRecaptchaSolutions(captchas);
+            const { solves, solveError } = await this.page.enterRecaptchaSolutions(solutions);
             if (findError || solutionError || solveError) {
-                await this.reload();
                 await this.waitForReCaptcha();
             }
         } else if (!this.options.headless) {

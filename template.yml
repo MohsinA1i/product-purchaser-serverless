@@ -42,44 +42,6 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-  TestFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/test/
-      Handler: test.handler
-      MemorySize: 128
-      Timeout: 30
-      Runtime: nodejs12.x
-      Description: Facilitates testing.
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
-      Layers:
-        - !Ref EssentialsLayer
-      Environment: 
-        Variables: 
-          TABLE_NAME: !Ref UsersTable
-
-  RegisterFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/register/
-      Handler: register.handler
-      MemorySize: 128
-      Timeout: 1
-      Runtime: nodejs12.x
-      Description: Adds new users to database.
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
-      Layers:
-        - !Ref EssentialsLayer
-      Environment: 
-        Variables: 
-          TABLE_NAME: !Ref UsersTable
-
   TaskFunction:
     Type: AWS::Serverless::Function
     Properties:

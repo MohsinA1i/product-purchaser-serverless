@@ -1,7 +1,7 @@
-const Connection = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/connection.js' : '/opt/connection.js');
+const Connection = require(process.env.AWS_SAM_LOCAL ? '/opt/nodejs/connection' : '/opt/connection');
 
-const StoreFactory = require('./stores/store-factory.js');
-const TaskManager = require('./task-manager.js');
+const StoreFactory = require('./stores/store-factory');
+const TaskManager = require('./task-manager');
 
 exports.handler = async (event) => {
     const connection = new Connection();
